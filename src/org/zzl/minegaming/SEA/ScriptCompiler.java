@@ -22,6 +22,8 @@ public class ScriptCompiler
 
 	public ScriptCompiler(String text)
 	{
+		CompileWindow.ByteCode = "";
+		CompileWindow.LogOutput = "";
 		script = text;
 		String[] lines = script.split("\n");
 		boolean error = false;
@@ -342,7 +344,7 @@ public class ScriptCompiler
 			}
 		}
 		if(error)
-			System.out.println(errorString);
+			print(errorString);
 		else
 		{
 			currentByte = oldByte;
@@ -358,13 +360,13 @@ public class ScriptCompiler
 			}
 			Main.hex = array.clone();
 			Main.scriptStart = scriptStart;
-			System.out.println("Script length in bytes (Decimal): " + currentByte);
-			System.out.println("Compiled Dump:");
+			print("Script length in bytes (Decimal): " + currentByte);
+			printBytecode("Compiled Dump:");
 			for(int i = 0; i < currentByte ; i++)
 			{
 				int b = array[i];
 				String hex = String.format("%02x", b);
-				System.out.print(hex + " ");
+				printByte(hex + " ");
 			}
 			
 			for(int i = 0; i < currentByte; i++)
@@ -379,8 +381,8 @@ public class ScriptCompiler
 	private void SetFreespaceStart(String space)
 	{
 		freespaceSearchStart = Integer.parseInt(space, 16);
-		System.out.println("Set script search start to " + freespaceSearchStart + " (0x" + space + ")");
-		System.out.println("");
+		print("Set script search start to " + freespaceSearchStart + " (0x" + space + ")");
+		print("");
 		//TODO Freespace Finding
 		SetScriptStart(space);
 	}
@@ -388,7 +390,7 @@ public class ScriptCompiler
 	private void SetScriptStart(String space)
 	{
 		scriptStart = Integer.parseInt(space, 16);
-		System.out.println("Set script start to 0x" + space);
+		print("Set script start to 0x" + space);
 	}
 
 	private boolean AddStringToSectionTable(String section)
@@ -409,15 +411,15 @@ public class ScriptCompiler
 		{
 			if(message.length() == 0)
 				SectionLocations.put(section, scriptStart + (currentByte) - 1);
-			System.out.println("Added section: " + section + " at 0x" + Integer.toHexString(scriptStart + (currentByte - (message.length() - stringEscapes + 1))));
+			print("Added section: " + section + " at 0x" + Integer.toHexString(scriptStart + (currentByte - (message.length() - stringEscapes + 1))));
 			if(!message.equals(""))
 			{
-				System.out.println("Section contains message: " + message);
+				print("Section contains message: " + message);
 				SectionLocations.put(section, scriptStart + (currentByte - (message.length() - stringEscapes + 1)));
 				StringSections.put(section, message.length() - stringEscapes + 1);
 				currentByte += 0;
 			}
-			System.out.println("");
+			print("");
 			return true;
 		}
 		else 
@@ -568,5 +570,23 @@ public class ScriptCompiler
 
 	public static String decompose(String s) {
 		return java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+","");
+	}
+	
+	public void print(String s)
+	{
+		System.out.println(s);
+		CompileWindow.LogOutput += s + "\n";
+	}
+	
+	public void printBytecode(String s)
+	{
+		System.out.println(s);
+		CompileWindow.ByteCode += s + "\n";
+	}
+	
+	public void printByte(String s)
+	{
+		System.out.print(s);
+		CompileWindow.ByteCode += s;
 	}
 }

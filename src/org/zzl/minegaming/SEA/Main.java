@@ -374,6 +374,7 @@ public class Main extends JFrame
 			public void actionPerformed(ActionEvent arg0) 
 			{
 				new ScriptCompiler(scriptEditor.getText());
+				new CompileWindow().show();
 			}
 		});
 		toolBar.add(btnCompile);
@@ -485,8 +486,13 @@ public class Main extends JFrame
 	}
 	
 	static boolean started = false;
+	public static LoggedPrintStream lpsOut = LoggedPrintStream.create(System.out);
+	public static LoggedPrintStream lpsErr = LoggedPrintStream.create(System.err);
 	public static void main(String[] args)
 	{
+		System.setOut(lpsOut);
+		System.setErr(lpsErr);
+		
 		String OS = System.getProperty("os.name");
 		started = true;
 		try
