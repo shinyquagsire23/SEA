@@ -6,13 +6,15 @@ import java.sql.SQLException;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class Database 
 {
 	Connection conn;
 	Statement stat;
-	public static List<String> commands = new ArrayList<String>();
+	public static HashMap<String, Command> commands = new HashMap<String, Command>();
+	public static HashMap<Integer, String> pokeString = new HashMap<Integer, String>();
 	public Database()
 	{
 		try 
@@ -23,9 +25,15 @@ public class Database
 		stat = conn.createStatement();
 		AddAliases();
 		ResultSet rs = stat.executeQuery("select * from commands;");
-		while (rs.next()) {
-		//System.out.println(rs.getString("name") + ": " + rs.getString("desc"));
-			commands.add(rs.getString("name"));
+		while (rs.next()) 
+		{
+			Command c = new Command(rs.getString("name"),rs.getInt("hex"),rs.getString("desc"), rs.getInt("length"), rs.getInt("args"),rs.getString("arglengths"));
+			commands.put(rs.getString("name"), c);
+		}
+		rs = stat.executeQuery("select * from pokestring;");
+		while (rs.next()) 
+		{
+			pokeString.put(rs.getInt("hex"), rs.getString("char"));
 		}
 		rs.close();
 		//conn.close();
@@ -34,7 +42,7 @@ public class Database
 		}
 	}
 	
-	public Command GetCommandInfo(String cmd)
+	public Command GetCommandInfoDDB(String cmd)
 	{
 		try 
 		{
@@ -46,6 +54,20 @@ public class Database
 		rs.close();
 		return c;
 		} catch (SQLException e) 
+		{
+			if(cmd.equalsIgnoreCase("msgbox"))
+				return new Command("msgbox",-2,"Prints text to a messagebox.\nEquivalent to:\n\nloadpointer 0x0 <msg-dword>\ncallstd <type-byte>", 8, 2, "30");
+			return new Command("error", -1, "error",-1,-1, "");
+		}
+	}
+	
+	public Command GetCommandInfo(String cmd)
+	{
+		try
+		{
+			return commands.get(cmd);
+		}
+		catch(Exception e)
 		{
 			if(cmd.equalsIgnoreCase("msgbox"))
 				return new Command("msgbox",-2,"Prints text to a messagebox.\nEquivalent to:\n\nloadpointer 0x0 <msg-dword>\ncallstd <type-byte>", 8, 2, "30");
@@ -75,8 +97,8 @@ public class Database
 	
 	private void AddAliases() throws SQLException
 	{
-		commands.add("msgbox");
-		commands.add("if");
+		commands.put("msgbox",new Command("msgbox",-2,"Prints text to a messagebox.\nEquivalent to:\n\nloadpointer 0x0 <msg-dword>\ncallstd <type-byte>", 8, 2, "30"));
+		//commands.add("if");
 	}
 	
 	public int GetHexFromChar(char c)
@@ -93,7 +115,7 @@ public class Database
 		return data;
 	}
 	
-	public String GetTextFromHex(int hex)
+	public String GetTextFromHexDDB(int hex)
 	{
 		String c;
 		try {
@@ -107,7 +129,7 @@ public class Database
 		return c;
 	}
 	
-	public char GetCharFromHex(int hex)
+	public char GetCharFromHexDDB(int hex)
 	{
 		char c;
 		try {
@@ -118,6 +140,34 @@ public class Database
 				e.printStackTrace();
 				return ' ';
 			}
+		return c;
+	}
+	
+	public String GetTextFromHex(int hex)
+	{
+		String c;
+		try 
+		{
+			c = pokeString.get(hex);
+		} 
+		catch (Exception e) 
+		{
+			c = "\\h" + String.format("X2", hex);
+		}
+		return c;
+	}
+	
+	public char GetCharFromHex(int hex)
+	{
+		char c;
+		try 
+		{
+			c = pokeString.get(hex).toCharArray()[0];
+		} 
+		catch (Exception e) 
+		{
+			c = ' ';
+		}
 		return c;
 	}
 	
@@ -135,7 +185,7 @@ public class Database
 		conn.setAutoCommit(false);
 		prep.executeBatch();
 		conn.setAutoCommit(true);
-		commands.add(name);
+		commands.put(name, new Command(name,hex,desc,length,args,arglengths));
 	}
 	
 	/*private void WriteAllCommands() throws SQLException

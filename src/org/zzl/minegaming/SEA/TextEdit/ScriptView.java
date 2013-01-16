@@ -40,7 +40,7 @@ public class ScriptView extends PlainView {
         
         
         //patternColors.put(Pattern.compile("\\)"), Color.BLUE);
-        for(String s : Database.commands)
+        for(String s : Database.commands.keySet())
         {
         	//patternColors.put(Pattern.compile(s + "[(]"), Color.BLUE);
         	patternColors.put(Pattern.compile(s + ""), Color.BLUE);

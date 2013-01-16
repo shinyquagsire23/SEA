@@ -6,7 +6,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
-public class ScriptCompiler 
+public class ScriptCompiler extends Thread
 {
 	final int MAX_ELEMENTS = 1000;
 	private String script; 
@@ -19,12 +19,17 @@ public class ScriptCompiler
 	private List<String> StringList = new ArrayList<String>();
 	Database ddb = Main.Commands;
 	private String errorReport = "";
-
+	
 	public ScriptCompiler(String text)
 	{
+		script = text;
+	}
+	
+	public void run()
+	{
+		long begin = System.currentTimeMillis();
 		CompileWindow.ByteCode = "";
 		CompileWindow.LogOutput = "";
-		script = text;
 		String[] lines = script.split("\n");
 		boolean error = false;
 		String errorString = "";
@@ -374,6 +379,12 @@ public class ScriptCompiler
 				int b = array[i];
 				GlobalVars.NewROM[scriptStart + i] = (byte)b;
 			}
+			
+			long end = System.currentTimeMillis();
+
+			long dt = end - begin;
+			CompileWindow.LogOutput = "Compiled in " + (float)(dt / 1000f) + "s.\n" + CompileWindow.LogOutput;
+			CompileWindow.UpdateText();
 		}
 	}
 

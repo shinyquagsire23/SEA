@@ -379,8 +379,17 @@ public class Main extends JFrame
 		{
 			public void actionPerformed(ActionEvent arg0) 
 			{
-				new ScriptCompiler(scriptEditor.getText());
-				new CompileWindow().show();
+				new Thread()
+				{
+					public void run()
+					{
+						CompileWindow c = new CompileWindow();
+						c.setVisible(true);
+					}
+				}.start();
+				
+				ScriptCompiler sc = new ScriptCompiler(scriptEditor.getText());
+				new Thread(sc).start(); //Use threading to prevent lag between the Log Window and compiling.
 			}
 		});
 		toolBar.add(btnCompile);

@@ -27,6 +27,8 @@ public class CompileWindow extends JFrame {
 
 	public static String LogOutput = "CODE OUTPUT BANANAS";
 	public static String ByteCode = "BYTECODE PINEAPPLES";
+	public static JTextPane tbLog = new JTextPane();
+	public static JTextPane tbBytes = new JTextPane();
 	
 	public CompileWindow()
 	{
@@ -45,7 +47,6 @@ public class CompileWindow extends JFrame {
 		scrollPane.setBounds(12, 12, 268, 230);
 		panel.add(scrollPane);
 		
-		JTextPane tbLog = new JTextPane();
 		tbLog.setText(LogOutput);
 		tbLog.setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null));
 		scrollPane.setViewportView(tbLog);
@@ -54,7 +55,7 @@ public class CompileWindow extends JFrame {
 		scrollPane_1.setBounds(12, 248, 268, 77);
 		panel.add(scrollPane_1);
 		
-		JTextPane tbBytes = new JTextPane();
+		
 		tbBytes.setText(ByteCode);
 		tbBytes.setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null));
 		scrollPane_1.setViewportView(tbBytes);
@@ -120,5 +121,11 @@ public class CompileWindow extends JFrame {
 		getContentPane().add(panel);
 		this.setSize(295,395);
 		this.setVisible(true);
+	}
+	
+	public static void UpdateText()
+	{
+		tbLog.setText(LogOutput);
+		tbBytes.setText(ByteCode);
 	}
 }
