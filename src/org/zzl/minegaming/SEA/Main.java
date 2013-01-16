@@ -17,6 +17,9 @@ import org.zzl.minegaming.SEA.TextEdit.TextLineNumber;
 
 import jsyntaxpane.DefaultSyntaxKit;
 import jsyntaxpane.syntaxkits.*;
+
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.ActionListener;
@@ -58,9 +61,12 @@ public class Main extends JFrame
 				
 		ScriptSyntaxKit.initKit();
 		
-		JSplitPane splitPane = new JSplitPane();
+		final JSplitPane splitPane = new JSplitPane();
+		splitPane.setEnabled(false);
 		splitPane.setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null));
-		splitPane.setDividerLocation((int)(this.getWidth() * .75));
+		float percent = (float)(1f - (220f / (float)this.getWidth()));
+		splitPane.setDividerLocation((int)(this.getWidth() * (float)percent));
+		System.out.println(percent);
 		panel.add(splitPane, BorderLayout.CENTER);
 		//scrollPane.setViewportView(splitPane);
 		
@@ -482,6 +488,27 @@ public class Main extends JFrame
 		JMenu mnHelp = new JMenu("Help");
 		menuBar.add(mnHelp);
 		//------------------------------
+		this.addComponentListener(new ComponentListener() 
+		{  
+	        public void componentResized(ComponentEvent evt) {
+	            Component c = (Component)evt.getSource();
+	    		float percent = (float)(1f - (220f / (float)c.getWidth()));
+	    		splitPane.setDividerLocation((int)(c.getWidth() * (float)percent));
+	            System.out.println((1 - (220 / c.getWidth())));
+	        }
+
+			@Override
+			public void componentHidden(ComponentEvent arg0) {	
+			}
+
+			@Override
+			public void componentMoved(ComponentEvent arg0) {
+			}
+
+			@Override
+			public void componentShown(ComponentEvent arg0) {			
+			}
+	});
 		this.setVisible(true);
 	}
 	
