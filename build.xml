@@ -26,6 +26,13 @@
                 <exclude name="**/*.java"/>
             </fileset>
         </copy>
+        <jar destfile="./SEA.jar"
+             basedir="./bin">
+            <fileset dir="./libs/" includes="**/*" />
+             <manifest>
+                 <attribute name="Main-Class" value="org.zzl.minegaming.SEA.Main"/>
+             </manifest>
+        </jar>
     </target>
     <target name="clean">
         <delete dir="bin"/>
