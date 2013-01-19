@@ -5,19 +5,18 @@
               directory with the processing instruction <?eclipse.ant.import?>
               as the first entry and export the buildfile again. --><project basedir="." default="build" name="SEA">
     <property environment="env"/>
-    <property name="ECLIPSE_HOME" value="../../../../usr/share/eclipse"/>
-    <property name="jsyntaxpane.location" value="../jsyntaxpane"/>
+    <property name="jsyntaxpane.location" value="../SEA"/>
     <property name="debuglevel" value="source,lines,vars"/>
     <property name="target" value="1.7"/>
     <property name="source" value="1.7"/>
     <path id="jsyntaxpane.classpath">
         <pathelement location="${jsyntaxpane.location}/bin"/>
-        <pathelement location="${jsyntaxpane.location}/../jsyntaxpane-0.9.5-b29.jar"/>
+        <pathelement location="${jsyntaxpane.location}/jsyntaxpane-0.9.5-b29.jar"/>
     </path>
     <path id="SEA.classpath">
         <pathelement location="bin"/>
         <path refid="jsyntaxpane.classpath"/>
-        <pathelement location="../sqlitejdbc-v056.jar"/>
+        <pathelement location="/sqlitejdbc-v056.jar"/>
     </path>
     <target name="init">
         <mkdir dir="bin"/>
@@ -48,16 +47,6 @@
             <src path="src"/>
             <classpath refid="SEA.classpath"/>
         </javac>
-    </target>
-    <target description="Build all projects which reference this project. Useful to propagate changes." name="build-refprojects"/>
-    <target description="copy Eclipse compiler jars to ant lib directory" name="init-eclipse-compiler">
-        <copy todir="${ant.library.dir}">
-            <fileset dir="${ECLIPSE_HOME}/plugins" includes="org.eclipse.jdt.core_*.jar"/>
-        </copy>
-        <unzip dest="${ant.library.dir}">
-            <patternset includes="jdtCompilerAdapter.jar"/>
-            <fileset dir="${ECLIPSE_HOME}/plugins" includes="org.eclipse.jdt.core_*.jar"/>
-        </unzip>
     </target>
     <target description="compile project with Eclipse compiler" name="build-eclipse-compiler">
         <property name="build.compiler" value="org.eclipse.jdt.core.JDTCompilerAdapter"/>
