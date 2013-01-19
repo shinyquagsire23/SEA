@@ -8,29 +8,19 @@ import java.awt.Dimension;
 import java.awt.FileDialog;
 import java.awt.Font;
 import java.awt.Frame;
-import java.awt.Point;
 import java.awt.FlowLayout;
 import javax.swing.border.BevelBorder;
 
 import org.zzl.minegaming.SEA.TextEdit.ScriptEditor;
 import org.zzl.minegaming.SEA.TextEdit.TextLineNumber;
 
-import jsyntaxpane.DefaultSyntaxKit;
-import jsyntaxpane.syntaxkits.*;
-
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.Insets;
-import javax.swing.border.CompoundBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.border.TitledBorder;
-import javax.swing.filechooser.FileFilter;
-
-import java.awt.GridLayout;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.nio.file.Files;
@@ -58,8 +48,6 @@ public class Main extends JFrame
 		panel_1.setPreferredSize(new Dimension(10, 24));
 		panel_1.setMinimumSize(new Dimension(100, 20));
 		panel.add(panel_1, BorderLayout.SOUTH);
-				
-		ScriptSyntaxKit.initKit();
 		
 		final JSplitPane splitPane = new JSplitPane();
 		splitPane.setEnabled(false);
