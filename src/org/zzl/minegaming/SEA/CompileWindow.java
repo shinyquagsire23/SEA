@@ -9,6 +9,7 @@ import javax.swing.border.BevelBorder;
 import javax.swing.JScrollPane;
 import javax.swing.JButton;
 
+import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.FileDialog;
 import java.awt.Frame;
@@ -44,7 +45,7 @@ public class CompileWindow extends JFrame {
 		panel.add(textPane);
 		
 		JScrollPane scrollPane = new JScrollPane();
-		scrollPane.setBounds(12, 12, 268, 230);
+		scrollPane.setBounds(12, 12, 290, 230);
 		panel.add(scrollPane);
 		
 		tbLog.setText(LogOutput);
@@ -52,7 +53,7 @@ public class CompileWindow extends JFrame {
 		scrollPane.setViewportView(tbLog);
 		
 		JScrollPane scrollPane_1 = new JScrollPane();
-		scrollPane_1.setBounds(12, 248, 268, 77);
+		scrollPane_1.setBounds(12, 248, 290, 77);
 		panel.add(scrollPane_1);
 		
 		
@@ -60,7 +61,7 @@ public class CompileWindow extends JFrame {
 		tbBytes.setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null));
 		scrollPane_1.setViewportView(tbBytes);
 		
-		JButton btnSaveLog = new JButton("Save Log...");
+		JButton btnSaveLog = new JButton("Save Log");
 		btnSaveLog.addActionListener(new ActionListener() 
 		{
 			public void actionPerformed(ActionEvent e) 
@@ -103,7 +104,7 @@ public class CompileWindow extends JFrame {
 				}
 			}
 		});
-		btnSaveLog.setBounds(12, 337, 117, 25);
+		btnSaveLog.setBounds(12, 337, 98, 25);
 		panel.add(btnSaveLog);
 		
 		JButton btnClose = new JButton("Close");
@@ -115,11 +116,45 @@ public class CompileWindow extends JFrame {
 				window.dispose();
 			}
 		});
-		btnClose.setBounds(163, 337, 117, 25);
+		btnClose.setBounds(229, 337, 73, 25);
 		panel.add(btnClose);
 		
 		getContentPane().add(panel);
-		this.setSize(295,395);
+		
+		JButton btnViewLog = new JButton("View Log");
+		btnViewLog.addActionListener(new ActionListener() 
+		{
+			public void actionPerformed(ActionEvent arg0) 
+			{
+				Path location = Paths.get(GlobalVars.SettingsDir + "/temp.log");
+				String s = "LOG OUTPUT:\n-----\n\n" + LogOutput + "\n" + ByteCode + "\n\nCONSOLE OUTPUT:\n-----\n\n" + Main.lpsOut.buf + "\n\nERRORS:\n-----\n\n" + Main.lpsErr.buf;
+				byte[] b = new byte[s.length()];
+				for(int i = 0; i < s.length(); i++)
+				{
+					b[i] = (byte)s.charAt(i);
+				}
+				try
+				{
+					Files.delete(location);
+					Files.createFile(location);
+					Files.write(location, b);
+					Desktop.getDesktop().open(new File(GlobalVars.SettingsDir + "/temp.log"));
+				}
+				catch(Exception ex)
+				{
+					String error = "Couldn't write Log to location '" + GlobalVars.SettingsDir + "temp.log" + "'!\nStacktrace:\n" + ex.getCause();
+					ex.printStackTrace();
+					System.out.println(GlobalVars.SettingsDir + "/temp.log");
+					JOptionPane.showMessageDialog(new Frame(),
+							error,
+					    	"'Tis an Error!",
+					    	JOptionPane.WARNING_MESSAGE);
+				}
+			}
+		});
+		btnViewLog.setBounds(119, 337, 98, 25);
+		panel.add(btnViewLog);
+		this.setSize(322,395);
 		this.setVisible(true);
 	}
 	
