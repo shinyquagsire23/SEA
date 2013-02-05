@@ -187,11 +187,11 @@ public class ScriptCompiler extends Thread
 				String argument = args.get(i);
 				try
 				{
-					int arg;
+					long arg;
 					if(argument.startsWith("0x"))
-						arg = Integer.parseInt(argument.replace("0x", "").trim(), 16);
+						arg = Long.parseLong(argument.replace("0x", "").trim(), 16);
 					else
-						arg = Integer.parseInt(argument.trim());
+						arg = Long.parseLong(argument.trim());
 					if(arg > 255)
 					{
 						if(paramformat[i] == '1')
@@ -213,11 +213,11 @@ public class ScriptCompiler extends Thread
 						try
 						{
 							@SuppressWarnings("unused") //Sorry, I need him too.
-							int arg;
+							long arg;
 							if(argument.startsWith("0x"))
-								arg = Integer.parseInt(argument.replace("0x", "").trim(), 16);
+								arg = Long.parseLong(argument.replace("0x", "").trim(), 16);
 							else
-								arg = Integer.parseInt(argument.trim());
+								arg = Long.parseLong(argument.trim());
 							if(paramformat[i] != '3')
 							{
 								error = true;
@@ -254,13 +254,13 @@ public class ScriptCompiler extends Thread
 				currentByte++;
 				if(args.get(0).startsWith("0x"))
 				{
-					WriteDWord(Integer.parseInt(args.get(0), 16));
+					WriteDWord(Long.parseLong(args.get(0), 16));
 				}
 				else
 					WriteDWord(SectionLocations.get(args.get(0)));
 				WriteByte(ddb.GetCommandInfo("callstd").HexCode);
 				currentByte++;
-				WriteByte(Integer.parseInt(args.get(1).replace("0x", ""), 16));
+				WriteByte(Long.parseLong(args.get(1).replace("0x", ""), 16));
 				currentByte++;
 				break;
 			case -3: //if negative bytecode -- alternative to using if[1/2]
@@ -277,7 +277,7 @@ public class ScriptCompiler extends Thread
 				currentByte++;
 				if(args.get(2).startsWith("0x"))
 				{
-					WriteDWord(Integer.parseInt(args.get(2), 16));
+					WriteDWord(Long.parseLong(args.get(2), 16));
 				}
 				else
 					WriteDWord(SectionLocations.get(args.get(2)));
@@ -299,17 +299,17 @@ public class ScriptCompiler extends Thread
 					counter++;
 					if(arg.equals(""))
 						break;
-					int arglength = 0;
+					long arglength = 0;
 					char argtype = cmd.ParamFormat.toCharArray()[counter];
 					if(arg.startsWith("0x") || isHex(arg))
 					{
-						arglength = Integer.parseInt(arg.replace("0x", ""), 16);
+						arglength = Long.parseLong(arg.replace("0x", ""), 16);
 					}
 					else
 					{
 						try
 						{
-							arglength = Integer.parseInt(arg);
+							arglength = Long.parseLong(arg);
 						}
 						catch(Exception e)
 						{
@@ -514,13 +514,15 @@ public class ScriptCompiler extends Thread
 		//TODO Write to specific location
 	//}
 
-	private void WriteByte(int write)
+	private void WriteByte(long writez)
 	{
+		int write = (int)(writez & 0x000000FF);
 		WriteList.set(currentByte, write);
 	}
 
-	private void WriteWord(int word)
+	private void WriteWord(long wordz)
 	{
+		int word = (int)(wordz & 0x0000FFFF);
 		int[] array = new int[2];
 		String s = toWordString(word);
 		array[0] = Integer.parseInt(s.substring(2, 4), 16);
@@ -534,26 +536,32 @@ public class ScriptCompiler extends Thread
 		return String.format("%04X", Math.abs(b)); //Use absolute value to prevent negative bytes
 	}
 
-	public void WriteDWord(int dword)
+	public void WriteDWord(long dword)
 	{
-		boolean extended = (dword >= 0x1000000);
+		byte extendingbyte = 8;
 		if(dword >= 0x1000000 && dword < 0x2000000)
-			dword -= 0x1000000;
+		{
+			dword = dword & 0x00FFFFFF;
+			extendingbyte = 9;
+		}
+		else if(dword >= 0x2000000)
+		{
+			extendingbyte = (byte)((dword & 0xFF000000) >> (8 * 3));
+			dword = dword & 0x00FFFFFF;
+		}
 
 		ByteBuffer b = ByteBuffer.allocate(4);
 		b.order(ByteOrder.LITTLE_ENDIAN);
-		b.putInt(dword);
+		b.putInt((int)dword);
 		byte[] array = b.array();
 		if(array[3] == 0)
 		{
-			if(!extended)
-				array[3] = 8;
-			else
-				array[3] = 9;
+			array[3] = extendingbyte;
 		}
 		for(int i = 0; i < array.length; i++)
 		{
-			WriteList.set(currentByte, (int)Math.abs(array[i]));
+			int j = (int)(array[i] & 0x000000FF);
+			WriteList.set(currentByte, j);
 			currentByte++;
 		}
 	}
