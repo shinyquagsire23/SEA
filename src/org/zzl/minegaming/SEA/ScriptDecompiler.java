@@ -93,6 +93,70 @@ public class ScriptDecompiler {
 			lastwasmsg = false;
 			int instruction = rom[i];
 			Command cmd = ddb.GetCommandInfo(instruction);
+			
+			//Command Aliases
+			if(cmd.Name.equalsIgnoreCase("preparemsg") && rom[i + 5] == ddb.GetCommandInfo("callstd").HexCode)
+			{
+				toWrite += "msgbox("; //Start our command alias
+				int args = 1;
+				
+				//Parse the DWord value
+				String dword = "0x" + byteToStringNoZero(rom[i + args + 3] - 8) + toHexString(rom[i + args + 2], true) + toHexString(rom[i + args + 1], true) + toHexString(rom[i + args], true);
+				int dwint = Integer.parseInt(dword.replace("0x", "").trim(),16);
+				SectionLocations.put(dword, dwint);
+				System.out.println("Registered string at "+ dword + "\n0x" + toHexString(dwint));
+				
+				//Register our string in SectionTypes
+				SectionTypes.put(dwint, PointerType.Text);
+				String sectionType = "msg_";
+				System.out.println("Found section at " + dword + "! Type: " + sectionType.replace("_", ""));
+				
+				//Write the DWord
+				toWrite += dword.replace("0x", sectionType);
+				toWrite += " " + rom[i + 6] + ")";
+				
+				//Add to our data counter, and push the new line to our text viewer
+				i += 6;
+				datalocation += 6;
+				addLine(toWrite.trim());
+				Main.scriptEditor.setText(script.trim());
+				continue;
+			}
+			
+			if(cmd.Name.equalsIgnoreCase("if1") || cmd.Name.equalsIgnoreCase("if2"))
+			{
+				toWrite += "if("; //Start our command alias
+				int args = 1;
+				
+				toWrite += "0x" + toHexString(rom[i + args]) + " "; //Write our factor thingy
+				args += 1;
+				
+				//Write goto or call depending on the if type
+				if(cmd.Name.equalsIgnoreCase("if1"))
+					toWrite += "goto ";
+				else
+					toWrite += "call ";
+				
+				//Write our location
+				String dword = "0x" + byteToStringNoZero(rom[i + args + 3] - 8) + toHexString(rom[i + args + 2], true) + toHexString(rom[i + args + 1], true) + toHexString(rom[i + args], true);
+				int dwint = Integer.parseInt(dword.replace("0x", "").trim(),16);
+				String sectionType = "loc_";
+				
+				//Register it
+				SectionLocations.put(dword, dwint);
+				SectionTypes.put(dwint, PointerType.Script);
+				
+				System.out.println("Found section at " + dword + "! Type: " + sectionType.replace("_", ""));
+				toWrite += dword.replace("0x", sectionType) + ") ";
+				
+				//Add to our data counter, and push the new line to our text viewer
+				i += 5;
+				datalocation += 5;
+				addLine(toWrite.trim());
+				Main.scriptEditor.setText(script.trim());
+				continue;
+			}
+			
 			toWrite += cmd.Name + " ";
 			int args = 1;
 			if(cmd.NumParams > 0)
