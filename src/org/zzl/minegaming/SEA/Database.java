@@ -149,6 +149,8 @@ public class Database
 		try 
 		{
 			c = pokeString.get(hex);
+			if(c == null)
+				c = " ";
 		} 
 		catch (Exception e) 
 		{
@@ -163,6 +165,8 @@ public class Database
 		try 
 		{
 			c = pokeString.get(hex).toCharArray()[0];
+			if(hex == 0)
+				c = ' ';
 		} 
 		catch (Exception e) 
 		{
