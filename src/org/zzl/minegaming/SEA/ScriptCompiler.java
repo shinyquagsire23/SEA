@@ -1,4 +1,7 @@
 package org.zzl.minegaming.SEA;
+import java.awt.Color;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -27,6 +30,8 @@ public class ScriptCompiler extends Thread
 	
 	public void run()
 	{
+		try
+		{
 		long begin = System.currentTimeMillis();
 		CompileWindow.ByteCode = "";
 		CompileWindow.LogOutput = "";
@@ -257,7 +262,16 @@ public class ScriptCompiler extends Thread
 					WriteDWord(Long.parseLong(args.get(0), 16));
 				}
 				else
-					WriteDWord(SectionLocations.get(args.get(0)));
+				{
+					if(!SectionLocations.containsKey(args.get(0)))
+					{
+						error = true;
+						errorString = "Section name \"" + args.get(0) + "\" is not in the section index on line " + linenumber;
+						break;
+					}
+					else
+						WriteDWord(SectionLocations.get(args.get(0)));
+				}
 				WriteByte(ddb.GetCommandInfo("callstd").HexCode);
 				currentByte++;
 				WriteByte(Long.parseLong(args.get(1).replace("0x", ""), 16));
@@ -349,7 +363,11 @@ public class ScriptCompiler extends Thread
 			}
 		}
 		if(error)
+		{
+			CompileWindow.tbLog.setForeground(Color.red);
 			print(errorString);
+			CompileWindow.UpdateText();
+		}
 		else
 		{
 			currentByte = oldByte;
@@ -384,6 +402,17 @@ public class ScriptCompiler extends Thread
 
 			long dt = end - begin;
 			CompileWindow.LogOutput = "Compiled in " + (float)(dt / 1000f) + "s.\n" + CompileWindow.LogOutput;
+			CompileWindow.UpdateText();
+		}
+	}
+		catch(Exception e)
+		{
+			StringWriter sw = new StringWriter();
+			PrintWriter pw = new PrintWriter(sw);
+			e.printStackTrace(pw);
+			e.printStackTrace();
+			CompileWindow.tbLog.setForeground(Color.red);
+			CompileWindow.LogOutput += 	"JAVA EXCEPTION WHILE COMPILING!\n---------------\n" + sw.toString(); // stack trace as a string
 			CompileWindow.UpdateText();
 		}
 	}
