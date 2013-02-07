@@ -26,7 +26,7 @@ public class ScriptView extends PlainView {
     private static String TAG_FREESPACE_BEGIN = "[;#]0[xX][1-9a-fA-F].*";
     private static String TAG_SECTION_STRING = ":([\u0000-\uFFFF]*?)[\\(\\s]";
     private static String TAG_SECTION = ":.*";
-    private static String TAG_TEH_JUICY_STUFF = "(\\()+.*(\\))$.*";//"^(?!//).*\\(([^}]*)\\)";
+    private static String TAG_TEH_JUICY_STUFF = "(\\()+.*(\\))$.*";
  
     static {
         // NOTE: the order is important!
@@ -36,15 +36,10 @@ public class ScriptView extends PlainView {
         patternColors.put(Pattern.compile(TAG_FREESPACE_BEGIN), Color.RED);
         for(String s : Database.commands.keySet())
         {
-        	//patternColors.put(Pattern.compile(s + "[(]"), Color.BLUE);
         	patternColors.put(Pattern.compile("^" + s + ""), Color.BLUE);
         }
         patternColors.put(Pattern.compile(TAG_TEH_JUICY_STUFF), Color.MAGENTA);
         patternColors.put(Pattern.compile(TAG_SECTION_STRING), new Color(100,0,200));
-        //patternColors.put(Pattern.compile(TAG_SECTION), new Color(100,0,201));
-        
-        
-        //patternColors.put(Pattern.compile("\\)"), Color.BLUE);
     }
  
     public ScriptView(Element element) {
