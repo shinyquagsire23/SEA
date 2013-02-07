@@ -18,6 +18,7 @@ public class ScriptCompiler extends Thread
 	private int currentByte = 0;
 	private HashMap<String,Integer> SectionLocations = new HashMap<String,Integer>();
 	private HashMap<String,Integer> StringSections = new HashMap<String,Integer>();
+	private HashMap<String,Long> VariableValues = new HashMap<String,Long>();
 	private List<Integer> WriteList = new ArrayList<Integer>(Collections.<Integer>nCopies(0x2000000, null));
 	private List<String> StringList = new ArrayList<String>();
 	Database ddb = Main.Commands;
@@ -82,6 +83,20 @@ public class ScriptCompiler extends Thread
 					continue;
 				else if(s.startsWith("'")) //Comment
 					continue;
+				else if(s.contains("=")) //Variables
+				{
+					String[] args = s.split("=");
+					String name = args[0].trim();
+					long value = 0;
+					String arg = args[1].replace("0x", "").trim();
+					if(args[1].contains("0x"))
+						value = Long.parseLong(arg,16);
+					else if(isHex(arg))
+						value = Long.parseLong(arg,16);
+					else 
+						value = Long.parseLong(arg);
+					VariableValues.put(name,value);
+				}
 				else
 				{
 					String filter = s.replace('(', ' ');
@@ -154,6 +169,8 @@ public class ScriptCompiler extends Thread
 					continue;
 				else if(s.startsWith("'")) //Comment
 					continue;
+				else if(s.contains("=")) //Variables
+					continue;
 				String filter = s.replace('(', ' ');
 				filter = filter.replace(')', ' ');
 				String[] split = filter.split(" ");
@@ -194,10 +211,12 @@ public class ScriptCompiler extends Thread
 					try
 					{
 						long arg;
-						if(argument.startsWith("0x"))
+						if(argument.startsWith("0x") || isHex(argument))
 							arg = Long.parseLong(argument.replace("0x", "").trim(), 16);
 						else
+						{
 							arg = Long.parseLong(argument.trim());
+						}
 						if(arg > 255)
 						{
 							if(paramformat[i] == '1')
@@ -210,9 +229,11 @@ public class ScriptCompiler extends Thread
 					}
 					catch(Exception e)
 					{
-						if(argument.startsWith("`"))
+						if(!VariableValues.containsKey(argument.trim()) && !SectionLocations.containsKey(args.get(0)))
 						{
-							//TODO Special Args
+							error = true;
+							errorString = "Variable \"" + argument + "\" is not in the variable index on line " + linenumber;
+							break;
 						}
 						else
 						{
@@ -237,8 +258,7 @@ public class ScriptCompiler extends Thread
 								{
 
 								}
-								else if(!SectionLocations.containsKey(argument)){}
-								else
+								else if(!SectionLocations.containsKey(argument))
 								{
 									error = true;
 									errorString = "Section name \"" + argument + "\" is not in the section index on line " + linenumber;
@@ -316,11 +336,11 @@ public class ScriptCompiler extends Thread
 							break;
 						long arglength = 0;
 						char argtype = cmd.ParamFormat.toCharArray()[counter];
-						if(arg.startsWith("0x") || isHex(arg))
+						if((arg.startsWith("0x") || isHex(arg)) && !VariableValues.containsKey(arg.trim()))
 						{
 							arglength = Long.parseLong(arg.replace("0x", ""), 16);
 						}
-						else
+						else if(!VariableValues.containsKey(arg.trim()))
 						{
 							try
 							{
@@ -328,10 +348,14 @@ public class ScriptCompiler extends Thread
 							}
 							catch(Exception e)
 							{
-								if(arg.startsWith("`"))
+								arg = arg.trim();
+								if(argtype >= 3)
+									break;
+								if(VariableValues.containsKey(arg))
 								{
-									//Convert special arg to number
-									//currentByte++;
+									long pointer = VariableValues.get(arg);
+									WriteDWord(pointer);
+									currentByte += 4;
 								}
 								else
 								{
@@ -344,19 +368,46 @@ public class ScriptCompiler extends Thread
 						}
 						if(argtype == '3') //Word Value
 						{
-							WriteDWord(arglength);
+							if(VariableValues.containsKey(arg))
+							{
+								long pointer = VariableValues.get(arg);
+								WriteDWord(pointer);
+								currentByte += 4;
+							}
+							else
+							{
+								WriteDWord(arglength);
+							}
 							continue;
 						}
 						if(argtype == '2')
 						{
-							WriteWord(arglength);
-							currentByte += 2;
+							if(VariableValues.containsKey(arg))
+							{
+								long pointer = VariableValues.get(arg);
+								WriteWord(pointer & 0xFFFF);
+								currentByte += 2;
+							}
+							else
+							{
+								WriteWord(arglength);
+								currentByte += 2;
+							}
 							continue;
 						}
 						if(argtype == '1')
 						{
-							WriteByte(arglength);
-							currentByte++;
+							if(VariableValues.containsKey(arg))
+							{
+								long pointer = VariableValues.get(arg);
+								WriteByte(pointer & 0xFF);
+								currentByte += 1;
+							}
+							else
+							{
+								WriteByte(arglength);
+								currentByte++;
+							}
 							continue;
 						}
 					}
@@ -598,6 +649,8 @@ public class ScriptCompiler extends Thread
 
 	public Boolean isHex(String arg)
 	{
+		if(arg.startsWith("0x"))
+			arg.replace("0x", "");
 		if(!containsAF(arg))
 			return false;
 		try
