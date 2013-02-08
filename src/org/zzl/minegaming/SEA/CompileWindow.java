@@ -126,7 +126,7 @@ public class CompileWindow extends JFrame {
 		{
 			public void actionPerformed(ActionEvent arg0) 
 			{
-				Path location = Paths.get(GlobalVars.SettingsDir + "/temp.log");
+				Path location = Paths.get(GlobalVars.SettingsDir + File.pathSeparator + "temp.log");
 				String s = "LOG OUTPUT:\n-----\n\n" + LogOutput + "\n" + ByteCode + "\n\nCONSOLE OUTPUT:\n-----\n\n" + Main.lpsOut.buf + "\n\nERRORS:\n-----\n\n" + Main.lpsErr.buf;
 				byte[] b = new byte[s.length()];
 				for(int i = 0; i < s.length(); i++)

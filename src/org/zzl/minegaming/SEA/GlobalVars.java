@@ -1,13 +1,15 @@
 package org.zzl.minegaming.SEA;
 
+import java.io.File;
+
 public class GlobalVars {
 	public static String DebugCommand = "gvbam %f";
 	public static boolean FileOpened = false;
 	public static String FileLoc = "";
-	public static String LastDir = "/home/maxamillion/ROM Hacking/";
+	public static String LastDir = File.pathSeparator +"home" + File.pathSeparator + "maxamillion" + File.pathSeparator + "ROM Hacking" + File.pathSeparator;
 	public static byte[] ROM = new byte[0x2000000];
 	public static byte[] NewROM = new byte[0x2000000];
-	public static String SettingsDir = DefaultDirectory() + "/settings/";
+	public static String SettingsDir = DefaultDirectory() + File.pathSeparator + "settings" + File.pathSeparator;
 	public static String MainDir = DefaultDirectory();
 	
 	private static String DefaultDirectory()
