@@ -420,8 +420,6 @@ public class Main extends JFrame
 		{
 			public void actionPerformed(ActionEvent arg0) 
 			{
-				//Hello, World
-				
 				scriptEditor.setText(new ScriptDecompiler().decompile(GlobalVars.NewROM, scriptStart));
 			}
 		});
@@ -530,7 +528,7 @@ public class Main extends JFrame
 		    {   
 		    	try
 		    	{
-		    		//UIManager.setLookAndFeel(info.getClassName());
+		    		UIManager.setLookAndFeel(info.getClassName());
 		    		break;
 		    	}
 		    	catch(Exception e){}
@@ -539,7 +537,7 @@ public class Main extends JFrame
 		    {
 		    	try
 		    	{
-		    		//UIManager.setLookAndFeel(info.getClassName());
+		    		UIManager.setLookAndFeel(info.getClassName());
 		    		break;
 		    	}
 		    	catch(Exception e){}

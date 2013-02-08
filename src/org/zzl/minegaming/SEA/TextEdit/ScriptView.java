@@ -37,6 +37,7 @@ public class ScriptView extends PlainView {
         for(String s : Database.commands.keySet())
         {
         	patternColors.put(Pattern.compile("^" + s + ""), Color.BLUE);
+        	patternColors.put(Pattern.compile(";" + s + ""), Color.BLUE);
         }
         patternColors.put(Pattern.compile(TAG_TEH_JUICY_STUFF), Color.MAGENTA);
         patternColors.put(Pattern.compile(TAG_SECTION_STRING), new Color(100,0,200));
