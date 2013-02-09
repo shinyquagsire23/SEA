@@ -16,6 +16,7 @@ public class ScriptCompiler extends Thread
 	private int freespaceSearchStart = -1;
 	private int scriptStart = 0;
 	private int currentByte = 0;
+	private int oldByte = 0;
 	private HashMap<String,Integer> SectionLocations = new HashMap<String,Integer>();
 	private HashMap<String,Integer> StringSections = new HashMap<String,Integer>();
 	private HashMap<String,Long> VariableValues = new HashMap<String,Long>();
@@ -46,16 +47,10 @@ public class ScriptCompiler extends Thread
 			{
 				linenumber++;
 				if(s.startsWith("#"))
-				{
-					SetScriptStart(s.replace("#0x", ""));
 					continue;
-				}
 				if(s.startsWith(";"))
-				{
-					SetFreespaceStart(s.replace(";0x", ""));
 					continue;
-				}
-				else if(s.startsWith(":"))
+				if(s.startsWith(":"))
 				{
 					if(s.contains("(") && s.contains(")"))
 					{
@@ -65,15 +60,6 @@ public class ScriptCompiler extends Thread
 						s = split[0];
 						message = orig.replaceFirst(s, "").replaceFirst(" ", "").replace("(", "").replace(")", "");
 						StringList.add(message);
-					}
-					else
-					{
-						if(!AddStringToSectionTable(s.replace(":", "")))
-						{
-							error = true;
-							errorString = errorReport;
-							break;
-						}
 					}
 					continue;
 				}
@@ -124,29 +110,61 @@ public class ScriptCompiler extends Thread
 				}
 			}
 
-			for(String s : lines) //Parse strings last in the test run to prevent weirdies while compiling.
+			
+			for(String s : lines) //Get string's pointers for compiling.
 			{
-				if(s.startsWith(":"))
+				oldByte = currentByte;
+				if(s.startsWith("#"))
 				{
-					String orig = s;
-					String message = "";
-					String[] split = s.split(" ");
-					s = split[0];
-					message = orig.replaceFirst(s, "").replaceFirst(" ", "").replace("(", "").replace(")", "");
-					s = orig;
-					if(!StringList.contains(message))
-						continue;
-					if(!AddStringToSectionTable(s.replace(":", "")))
+					SetScriptStart(s.replace("#0x", ""));
+					continue;
+				}
+				else if(s.startsWith(";"))
+				{
+					SetFreespaceStart(s.replace(";0x", ""));
+					continue;
+				}
+				else if(s.startsWith(":"))
+				{
+					if(s.contains("(") && s.contains(")"))
 					{
-						error = true;
-						errorString = errorReport;
-						break;
+						String orig = s;
+						String message = "";
+						String[] split = s.split(" ");
+						s = split[0];
+						message = orig.replaceFirst(s, "").replaceFirst(" ", "").replace("(", "").replace(")", "");
+						s = orig;
+						if(!StringList.contains(message))
+							continue;
+						if(!AddStringToSectionTableTest(s.replace(":", "")))
+						{
+							error = true;
+							errorString = errorReport;
+							break;
+						}
 					}
 				}
 			}
-
+			
 			linenumber = 0;
-			int oldByte = currentByte;
+			currentByte = 0;
+			for(String s : lines) //One more time, this time to get sections. All this looping is making be feel like a bad programmer. :P
+			{
+				if(s.startsWith(":"))
+				{
+					if(!s.contains("(") && !s.contains(")"))
+					{
+						if(!AddStringToSectionTableTest(s.replace(":", ""))) //Sections we want to go in normally.
+						{
+							error = true;
+							errorString = errorReport;
+							break;
+						}
+					}
+				}
+			}
+			
+			linenumber = 0;
 			currentByte = 0;
 			for(String s : lines)
 			{
@@ -155,10 +173,7 @@ public class ScriptCompiler extends Thread
 				if(error)
 					break;
 				if(s.startsWith("#"))
-				{
-
 					continue;
-				}
 				else if(s.startsWith(";"))
 					continue;
 				else if(s.startsWith(":"))
@@ -231,9 +246,16 @@ public class ScriptCompiler extends Thread
 					{
 						if(!VariableValues.containsKey(argument.trim()) && !SectionLocations.containsKey(args.get(0)))
 						{
-							error = true;
-							errorString = "Variable \"" + argument + "\" is not in the variable index on line " + linenumber;
-							break;
+							if(!argument.equalsIgnoreCase("goto") || !argument.equalsIgnoreCase("call"))
+							{
+
+							}
+							else
+							{
+								error = true;
+								errorString = "Variable \"" + argument + "\" is not in the variable index on line " + linenumber;
+								break;
+							}
 						}
 						else
 						{
@@ -254,7 +276,7 @@ public class ScriptCompiler extends Thread
 							}
 							catch(Exception e2)
 							{
-								if(!argument.equalsIgnoreCase("goto"))
+								if(!argument.equalsIgnoreCase("goto") || !argument.equalsIgnoreCase("call"))
 								{
 
 								}
@@ -293,6 +315,7 @@ public class ScriptCompiler extends Thread
 						else
 							WriteDWord(SectionLocations.get(args.get(0)));
 					}
+					String msg = SectionLocations.get(args.get(0)).toString();
 					WriteByte(ddb.GetCommandInfo("callstd").HexCode);
 					currentByte++;
 					WriteByte(Long.parseLong(args.get(1).replace("0x", ""), 16));
@@ -312,7 +335,7 @@ public class ScriptCompiler extends Thread
 					currentByte++;
 					if(args.get(2).startsWith("0x"))
 					{
-						WriteDWord(Long.parseLong(args.get(2), 16));
+						WriteDWord(Long.parseLong(args.get(2).replace("0x", ""), 16));
 					}
 					else
 						WriteDWord(SectionLocations.get(args.get(2)));
@@ -422,7 +445,28 @@ public class ScriptCompiler extends Thread
 			}
 			else
 			{
-				currentByte = oldByte;
+				for(String s : lines) //Write strings to ROM
+				{
+					if(s.startsWith(":"))
+					{
+						String orig = s;
+						String message = "";
+						String[] split = s.split(" ");
+						s = split[0];
+						message = orig.replaceFirst(s, "").replaceFirst(" ", "").replace("(", "").replace(")", "");
+						s = orig;
+						if(!StringList.contains(message))
+							continue;
+						if(!AddStringToSectionTable(s.replace(":", "")))
+						{
+							error = true;
+							errorString = errorReport;
+							break;
+						}
+					}
+				}
+				
+				//currentByte = oldByte;
 				int[] array = new int[currentByte];
 				for(int i = 0; i < currentByte; i++)
 				{
@@ -476,7 +520,8 @@ public class ScriptCompiler extends Thread
 		print("Set script search start to " + freespaceSearchStart + " (0x" + space + ")");
 		print("");
 		//TODO Freespace Finding
-		SetScriptStart(space);
+		int freespace = FreeSpaceHelper.find(oldByte, freespaceSearchStart);
+		SetScriptStart(String.format("%x", freespace));
 	}
 
 	private void SetScriptStart(String space)
@@ -501,15 +546,50 @@ public class ScriptCompiler extends Thread
 		}
 		if(scriptStart != -1)
 		{
-			if(message.length() == 0)
-				SectionLocations.put(section, scriptStart + (currentByte) - 1);
 			print("Added section: " + section + " at 0x" + Integer.toHexString(scriptStart + (currentByte - (message.length() - stringEscapes + 1))));
 			if(!message.equals(""))
 			{
 				print("Section contains message: " + message);
+				//Add corrected address during test run so that the final run will contain the real value.
 				SectionLocations.put(section, scriptStart + (currentByte - (message.length() - stringEscapes + 1)));
 				StringSections.put(section, message.length() - stringEscapes + 1);
-				currentByte += 0;
+			}
+			print("");
+			return true;
+		}
+		else 
+		{
+			errorReport = "Cannot Allocate Space for Routine! No offset to begin search for free space, nor a static address was defined!";
+			return false;
+		}
+	}
+	
+	private boolean AddStringToSectionTableTest(String section)
+	{
+		String message = "";
+		//If it's a data location
+		if(section.contains("(") && section.contains(")"))
+		{
+			String orig = section;
+			String[] split = section.split(" ");
+			section = split[0];
+			message = orig.replaceFirst(section, "").replaceFirst(" ", "").replace("(", "").replace(")", "");
+			stringEscapes = 0;
+			if(!WriteStringTest(message))
+				return false;
+		}
+		if(scriptStart != -1)
+		{
+			if(message.length() == 0)
+			{
+				SectionLocations.put(section, scriptStart + (currentByte));
+				print("Added section: " + section + " at 0x" + Integer.toHexString(scriptStart + (currentByte - (message.length() - stringEscapes))));
+			}
+			if(!message.equals(""))
+			{
+				//Add message to section table to make the test run happy.
+				SectionLocations.put(section, scriptStart + (currentByte - (message.length() - stringEscapes + 1)));
+				StringSections.put(section, message.length() - stringEscapes + 1);
 			}
 			print("");
 			return true;
@@ -589,11 +669,42 @@ public class ScriptCompiler extends Thread
 		currentByte += 1;
 		return true;
 	}
-
-	//private void WriteString(int location)
-	//{
-	//TODO Write to specific location
-	//}
+	
+	private boolean WriteStringTest(String string)
+	{
+		string = decompose(string);
+		char[] array = string.toCharArray();
+		for(int i = 0; i < array.length; i++)
+		{
+			if(array[i] == '\\')
+			{
+				stringEscapes++;
+				char modifier = array[i + 1];
+				switch(modifier)
+				{
+				case 'n':
+					stringEscapes--;
+					break;
+				
+				case 'h': //WHY CAN'T I FRIGGIN APPEND A CHARACTER TO A STRING EASILY???
+					stringEscapes += 2;
+					i += 2;
+					break;
+				default:
+					stringEscapes--;
+					break;
+				}
+				i++;
+			}
+			else
+			{
+				int b = ddb.GetHexFromChar(array[i]);
+			}
+			currentByte++;
+		}
+		currentByte += 1;
+		return true;
+	}
 
 	private void WriteByte(long writez)
 	{

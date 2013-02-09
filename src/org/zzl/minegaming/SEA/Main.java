@@ -326,6 +326,7 @@ public class Main extends JFrame
 				{
 					GlobalVars.ROM = Files.readAllBytes(location);
 					GlobalVars.NewROM = Files.readAllBytes(location);
+					GlobalVars.FileOpened = true;
 					cbFile.addItem(fd.getDirectory() + fd.getFile());
 					cbFile.setMinimumSize(new Dimension(200, 20));
 					cbFile.setMaximumSize(new Dimension(200, 20));
@@ -341,6 +342,7 @@ public class Main extends JFrame
 								error,
 						    	"'Tis an Error!",
 						    	JOptionPane.WARNING_MESSAGE);
+						GlobalVars.FileOpened = false;
 					}
 				}
 			}
