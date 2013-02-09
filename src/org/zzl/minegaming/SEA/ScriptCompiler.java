@@ -17,11 +17,16 @@ public class ScriptCompiler extends Thread
 	private int scriptStart = 0;
 	private int currentByte = 0;
 	private int oldByte = 0;
+	private int linenumber = 0;
+	private boolean error = false;
+	private String header = "";
+	String errorString = "";
 	private HashMap<String,Integer> SectionLocations = new HashMap<String,Integer>();
 	private HashMap<String,Integer> StringSections = new HashMap<String,Integer>();
 	private HashMap<String,Long> VariableValues = new HashMap<String,Long>();
 	private List<Integer> WriteList = new ArrayList<Integer>(Collections.<Integer>nCopies(0x2000000, null));
 	private List<String> StringList = new ArrayList<String>();
+	private HashMap<String,String> AliasCommands = new HashMap<String,String>();
 	Database ddb = Main.Commands;
 	private String errorReport = "";
 	
@@ -39,404 +44,20 @@ public class ScriptCompiler extends Thread
 			CompileWindow.ByteCode = "";
 			CompileWindow.LogOutput = "";
 			String[] lines = script.split("\n");
-			boolean error = false;
-			String errorString = "";
-			int linenumber = 0;
 
-			for(String s : lines)
-			{
-				linenumber++;
-				if(s.startsWith("#"))
-					continue;
-				if(s.startsWith(";"))
-					continue;
-				if(s.startsWith(":"))
-				{
-					if(s.contains("(") && s.contains(")"))
-					{
-						String orig = s;
-						String message = "";
-						String[] split = s.split(" ");
-						s = split[0];
-						message = orig.replaceFirst(s, "").replaceFirst(" ", "").replace("(", "").replace(")", "");
-						StringList.add(message);
-					}
-					continue;
-				}
-				else if(s.equals(""))		//Whitespace
-					continue;
-				else if(s.startsWith("//")) //Comment
-					continue;
-				else if(s.startsWith("'")) //Comment
-					continue;
-				else if(s.contains("=")) //Variables
-				{
-					String[] args = s.split("=");
-					String name = args[0].trim();
-					long value = 0;
-					String arg = args[1].replace("0x", "").trim();
-					if(args[1].contains("0x"))
-						value = Long.parseLong(arg,16);
-					else if(isHex(arg))
-						value = Long.parseLong(arg,16);
-					else 
-						value = Long.parseLong(arg);
-					VariableValues.put(name,value);
-				}
-				else
-				{
-					String filter = s.replace('(', ' ');
-					filter = filter.replace(')', ' ');
-					String[] split = filter.split(" ");
-					String command = split[0];
-					List<String> args = new ArrayList<String>();
-
-					for(int i = 1; i < split.length; i++)
-					{
-						args.add(split[i]);
-					}
-					switch(command)
-					{
-					case "msgbox": //msgbox negative bytecode
-						currentByte++;
-						currentByte += 4;
-						currentByte++;
-						currentByte++;
-						break;
-					default:
-						currentByte += ddb.GetCommandInfo(command).TotalSize;
-						break;
-					}
-				}
-			}
-
+			preCompile(lines);
+			String[] headers = header.split("\n");
 			
-			for(String s : lines) //Get string's pointers for compiling.
-			{
-				oldByte = currentByte;
-				if(s.startsWith("#"))
-				{
-					SetScriptStart(s.replace("#0x", ""));
-					continue;
-				}
-				else if(s.startsWith(";"))
-				{
-					SetFreespaceStart(s.replace(";0x", ""));
-					continue;
-				}
-				else if(s.startsWith(":"))
-				{
-					if(s.contains("(") && s.contains(")"))
-					{
-						String orig = s;
-						String message = "";
-						String[] split = s.split(" ");
-						s = split[0];
-						message = orig.replaceFirst(s, "").replaceFirst(" ", "").replace("(", "").replace(")", "");
-						s = orig;
-						if(!StringList.contains(message))
-							continue;
-						if(!AddStringToSectionTableTest(s.replace(":", "")))
-						{
-							error = true;
-							errorString = errorReport;
-							break;
-						}
-					}
-				}
-			}
+			//Now to compile the headers...
+			currentByte = oldByte;
+			preCompile(headers);
 			
 			linenumber = 0;
 			currentByte = 0;
-			for(String s : lines) //One more time, this time to get sections. All this looping is making be feel like a bad programmer. :P
-			{
-				if(s.startsWith(":"))
-				{
-					if(!s.contains("(") && !s.contains(")"))
-					{
-						if(!AddStringToSectionTableTest(s.replace(":", ""))) //Sections we want to go in normally.
-						{
-							error = true;
-							errorString = errorReport;
-							break;
-						}
-					}
-				}
-			}
 			
-			linenumber = 0;
-			currentByte = 0;
-			for(String s : lines)
-			{
-				linenumber++;
-
-				if(error)
-					break;
-				if(s.startsWith("#"))
-					continue;
-				else if(s.startsWith(";"))
-					continue;
-				else if(s.startsWith(":"))
-					continue;
-				else if(s.trim().equals(""))		//Whitespace
-					continue;
-				else if(s.startsWith("//")) //Comment
-					continue;
-				else if(s.startsWith("'")) //Comment
-					continue;
-				else if(s.contains("=")) //Variables
-					continue;
-				String filter = s.replace('(', ' ');
-				filter = filter.replace(')', ' ');
-				String[] split = filter.split(" ");
-				String command = split[0];
-				List<String> args = new ArrayList<String>();
-
-				for(int i = 1; i < split.length; i++)
-				{
-					args.add(split[i]);
-				}
-
-				Command cmd = ddb.GetCommandInfo(command);
-				if(cmd.HexCode == -1)
-				{
-					error = true;
-					errorString = "Command not found: " + command + " on line " + linenumber;
-					break;
-				}
-				if(cmd.NumParams > args.size())
-				{
-					error = true;
-					errorString = "Too many args for command " + command + " on line " + linenumber + ". Correct amount: " + cmd.NumParams;
-					break;
-				}
-				else if(cmd.NumParams < args.size())
-				{
-					error = true;
-					errorString = "Not enough args for command " + command + " on line " + linenumber + ". Correct amount: " + cmd.NumParams;
-					break;
-				}
-				for(int i = 0; i < args.size(); i++)
-				{
-					char[] paramformat = new char[args.size()];
-					cmd.ParamFormat.getChars(0, cmd.ParamFormat.length(), paramformat, 0);
-					if(cmd.NumParams == 0)
-						break;
-					String argument = args.get(i);
-					try
-					{
-						long arg;
-						if(argument.startsWith("0x") || isHex(argument))
-							arg = Long.parseLong(argument.replace("0x", "").trim(), 16);
-						else
-						{
-							arg = Long.parseLong(argument.trim());
-						}
-						if(arg > 255)
-						{
-							if(paramformat[i] == '1')
-							{
-								error = true;
-								errorString = "Parameter Mismatch! Parameter " + i + " of " + cmd.Name + " is not a word value on line " + linenumber;
-								break;
-							}
-						}
-					}
-					catch(Exception e)
-					{
-						if(!VariableValues.containsKey(argument.trim()) && !SectionLocations.containsKey(args.get(0)))
-						{
-							if(!argument.equalsIgnoreCase("goto") || !argument.equalsIgnoreCase("call"))
-							{
-
-							}
-							else
-							{
-								error = true;
-								errorString = "Variable \"" + argument + "\" is not in the variable index on line " + linenumber;
-								break;
-							}
-						}
-						else
-						{
-							try
-							{
-								@SuppressWarnings("unused") //Sorry, I need him too.
-								long arg;
-								if(argument.startsWith("0x"))
-									arg = Long.parseLong(argument.replace("0x", "").trim(), 16);
-								else
-									arg = Long.parseLong(argument.trim());
-								if(paramformat[i] != '3')
-								{
-									error = true;
-									errorString = "Parameter Mismatch! Parameter " + i + " of " + cmd.Name + " is not a dword value on line " + linenumber;
-									break;
-								}
-							}
-							catch(Exception e2)
-							{
-								if(!argument.equalsIgnoreCase("goto") || !argument.equalsIgnoreCase("call"))
-								{
-
-								}
-								else if(!SectionLocations.containsKey(argument))
-								{
-									error = true;
-									errorString = "Section name \"" + argument + "\" is not in the section index on line " + linenumber;
-									break;
-								}
-							}
-						}
-					}
-				}
-				if(error)
-					break;
-
-				boolean alias = false;
-				switch(cmd.HexCode)
-				{
-				case -2: //msgbox negative bytecode
-					alias = true;
-					WriteByte(ddb.GetCommandInfo("preparemsg").HexCode);
-					currentByte++;
-					if(args.get(0).startsWith("0x"))
-					{
-						WriteDWord(Long.parseLong(args.get(0), 16));
-					}
-					else
-					{
-						if(!SectionLocations.containsKey(args.get(0)))
-						{
-							error = true;
-							errorString = "Section name \"" + args.get(0) + "\" is not in the section index on line " + linenumber;
-							break;
-						}
-						else
-							WriteDWord(SectionLocations.get(args.get(0)));
-					}
-					String msg = SectionLocations.get(args.get(0)).toString();
-					WriteByte(ddb.GetCommandInfo("callstd").HexCode);
-					currentByte++;
-					WriteByte(Long.parseLong(args.get(1).replace("0x", ""), 16));
-					currentByte++;
-					break;
-				case -3: //if negative bytecode -- alternative to using if[1/2]
-					if(args.size() > 2)
-						alias = true;
-					else
-						break;
-					if(args.get(1).equalsIgnoreCase("goto") || args.get(1).equalsIgnoreCase("jump"))
-						WriteByte(ddb.GetCommandInfo("if1").HexCode); //If your friends jumped off a cliff, would you jump too?
-					else if(args.get(1).equalsIgnoreCase("call"))
-						WriteByte(ddb.GetCommandInfo("if2").HexCode); //... So call me maybe!
-					currentByte++;
-					WriteByte((byte)Integer.parseInt(args.get(0).replace("0x", ""),16)); //Write the equal, not equal, etc.
-					currentByte++;
-					if(args.get(2).startsWith("0x"))
-					{
-						WriteDWord(Long.parseLong(args.get(2).replace("0x", ""), 16));
-					}
-					else
-						WriteDWord(SectionLocations.get(args.get(2)));
-					break;
-				default:
-					break;
-				}
-
-				if(!alias)
-				{
-					//Write command bytecode
-					WriteByte(cmd.HexCode);
-					currentByte++;
-
-					//Write args
-					int counter = -1;
-					for(String arg : args)
-					{
-						counter++;
-						if(arg.equals(""))
-							break;
-						long arglength = 0;
-						char argtype = cmd.ParamFormat.toCharArray()[counter];
-						if((arg.startsWith("0x") || isHex(arg)) && !VariableValues.containsKey(arg.trim()))
-						{
-							arglength = Long.parseLong(arg.replace("0x", ""), 16);
-						}
-						else if(!VariableValues.containsKey(arg.trim()))
-						{
-							try
-							{
-								arglength = Long.parseLong(arg);
-							}
-							catch(Exception e)
-							{
-								arg = arg.trim();
-								if(argtype >= 3)
-									break;
-								if(VariableValues.containsKey(arg))
-								{
-									long pointer = VariableValues.get(arg);
-									WriteDWord(pointer);
-									currentByte += 4;
-								}
-								else
-								{
-									int pointer = SectionLocations.get(arg);
-									WriteDWord(pointer);
-									currentByte += 4;
-								}
-								continue;
-							}
-						}
-						if(argtype == '3') //Word Value
-						{
-							if(VariableValues.containsKey(arg))
-							{
-								long pointer = VariableValues.get(arg);
-								WriteDWord(pointer);
-								currentByte += 4;
-							}
-							else
-							{
-								WriteDWord(arglength);
-							}
-							continue;
-						}
-						if(argtype == '2')
-						{
-							if(VariableValues.containsKey(arg))
-							{
-								long pointer = VariableValues.get(arg);
-								WriteWord(pointer & 0xFFFF);
-								currentByte += 2;
-							}
-							else
-							{
-								WriteWord(arglength);
-								currentByte += 2;
-							}
-							continue;
-						}
-						if(argtype == '1')
-						{
-							if(VariableValues.containsKey(arg))
-							{
-								long pointer = VariableValues.get(arg);
-								WriteByte(pointer & 0xFF);
-								currentByte += 1;
-							}
-							else
-							{
-								WriteByte(arglength);
-								currentByte++;
-							}
-							continue;
-						}
-					}
-					continue;
-				}
-			}
+			compileScript(lines);
+			compileScript(headers);
+			
 			if(error)
 			{
 				CompileWindow.tbLog.setForeground(Color.red);
@@ -445,27 +66,8 @@ public class ScriptCompiler extends Thread
 			}
 			else
 			{
-				for(String s : lines) //Write strings to ROM
-				{
-					if(s.startsWith(":"))
-					{
-						String orig = s;
-						String message = "";
-						String[] split = s.split(" ");
-						s = split[0];
-						message = orig.replaceFirst(s, "").replaceFirst(" ", "").replace("(", "").replace(")", "");
-						s = orig;
-						if(!StringList.contains(message))
-							continue;
-						if(!AddStringToSectionTable(s.replace(":", "")))
-						{
-							error = true;
-							errorString = errorReport;
-							break;
-						}
-					}
-				}
-				
+				writeStrings(lines);
+				writeStrings(headers);
 				//currentByte = oldByte;
 				int[] array = new int[currentByte];
 				for(int i = 0; i < currentByte; i++)
@@ -731,6 +333,10 @@ public class ScriptCompiler extends Thread
 	public void WriteDWord(long dword)
 	{
 		byte extendingbyte = 8;
+		if(dword < 0x00001000) //Chances are if the value is below that, it's not a pointer
+		{
+			extendingbyte = 0;
+		}
 		if(dword >= 0x1000000 && dword < 0x2000000)
 		{
 			dword = dword & 0x00FFFFFF;
@@ -801,5 +407,512 @@ public class ScriptCompiler extends Thread
 	{
 		System.out.print(s);
 		CompileWindow.ByteCode += s;
+	}
+	
+	public void compileScript(String[] lines)
+	{
+		compileScript(lines,true);
+	}
+	
+	public void compileScript(String[] lines, boolean addlines)
+	{
+		for(String s : lines)
+		{
+			if(addlines)
+				linenumber++;
+
+			if(error)
+				break;
+			if(s.startsWith("#"))
+				continue;
+			else if(s.startsWith(";"))
+				continue;
+			else if(s.startsWith(":"))
+				continue;
+			else if(s.trim().equals(""))		//Whitespace
+				continue;
+			else if(s.startsWith("//")) //Comment
+				continue;
+			else if(s.startsWith("'")) //Comment
+				continue;
+			else if(s.contains("=")) //Variables
+				continue;
+			else if(s.startsWith("*"))
+				continue;
+			else if(s.toLowerCase().startsWith("import")) //Headers
+				continue;
+			String filter = s.replace('(', ' ');
+			filter = filter.replace(')', ' ');
+			String[] split = filter.split(" ");
+			String command = split[0];
+			List<String> args = new ArrayList<String>();
+
+			for(int i = 1; i < split.length; i++)
+			{
+				args.add(split[i]);
+			}
+
+			Command cmd = ddb.GetCommandInfo(command);
+			if(cmd == null)
+				cmd = new Command("error", -1, "error",-1,-1, "");
+			if(cmd.HexCode == -1)
+			{
+				if(AliasCommands.containsKey(command))
+				{
+					cmd.HexCode = -27;
+					cmd.Name = command;
+					cmd.Description = "Custom Alias";
+					cmd.NumParams = 0;
+					cmd.ParamFormat = "";
+					cmd.TotalSize = 1;
+				}
+				else
+				{
+					error = true;
+					errorString = "Command not found: " + command + " on line " + linenumber;
+					break;
+				}
+			}
+			if(cmd.NumParams < args.size() && cmd.HexCode != -27)
+			{
+				error = true;
+				errorString = "Too many args for command " + command + " on line " + linenumber + ". Correct amount: " + cmd.NumParams;
+				break;
+			}
+			else if(cmd.NumParams > args.size() && cmd.HexCode != -27)
+			{
+				error = true;
+				errorString = "Not enough args for command " + command + " on line " + linenumber + ". Correct amount: " + cmd.NumParams;
+				break;
+			}
+			for(int i = 0; i < args.size(); i++)
+			{
+				char[] paramformat = new char[args.size()];
+				cmd.ParamFormat.getChars(0, cmd.ParamFormat.length(), paramformat, 0);
+				if(cmd.NumParams == 0)
+					break;
+				String argument = args.get(i);
+				try
+				{
+					long arg;
+					if(argument.startsWith("0x") || isHex(argument))
+						arg = Long.parseLong(argument.replace("0x", "").trim(), 16);
+					else
+					{
+						arg = Long.parseLong(argument.trim());
+					}
+					if(arg > 255)
+					{
+						if(paramformat[i] == '1')
+						{
+							error = true;
+							errorString = "Parameter Mismatch! Parameter " + i + " of " + cmd.Name + " is not a word value on line " + linenumber;
+							break;
+						}
+					}
+				}
+				catch(Exception e)
+				{
+					if(!VariableValues.containsKey(argument.trim()) && !SectionLocations.containsKey(args.get(0)))
+					{
+						if(!argument.equalsIgnoreCase("goto") || !argument.equalsIgnoreCase("call"))
+						{
+
+						}
+						else
+						{
+							error = true;
+							errorString = "Variable \"" + argument + "\" is not in the variable index on line " + linenumber;
+							break;
+						}
+					}
+					else
+					{
+						try
+						{
+							@SuppressWarnings("unused") //Sorry, I need him too.
+							long arg;
+							if(argument.startsWith("0x"))
+								arg = Long.parseLong(argument.replace("0x", "").trim(), 16);
+							else
+								arg = Long.parseLong(argument.trim());
+							if(paramformat[i] != '3')
+							{
+								error = true;
+								errorString = "Parameter Mismatch! Parameter " + i + " of " + cmd.Name + " is not a dword value on line " + linenumber;
+								break;
+							}
+						}
+						catch(Exception e2)
+						{
+							if(!argument.equalsIgnoreCase("goto") || !argument.equalsIgnoreCase("call"))
+							{
+
+							}
+							else if(!SectionLocations.containsKey(argument))
+							{
+								error = true;
+								errorString = "Section name \"" + argument + "\" is not in the section index on line " + linenumber;
+								break;
+							}
+						}
+					}
+				}
+			}
+			if(error)
+				break;
+
+			boolean alias = false;
+			switch(cmd.HexCode)
+			{
+			case -2: //msgbox negative bytecode
+				alias = true;
+				WriteByte(ddb.GetCommandInfo("preparemsg").HexCode);
+				currentByte++;
+				if(args.get(0).startsWith("0x"))
+				{
+					WriteDWord(Long.parseLong(args.get(0), 16));
+				}
+				else
+				{
+					if(!SectionLocations.containsKey(args.get(0)))
+					{
+						error = true;
+						errorString = "Section name \"" + args.get(0) + "\" is not in the section index on line " + linenumber;
+						break;
+					}
+					else
+						WriteDWord(SectionLocations.get(args.get(0)));
+				}
+				String msg = SectionLocations.get(args.get(0)).toString();
+				WriteByte(ddb.GetCommandInfo("callstd").HexCode);
+				currentByte++;
+				WriteByte(Long.parseLong(args.get(1).replace("0x", ""), 16));
+				currentByte++;
+				break;
+			case -3: //if negative bytecode -- alternative to using if[1/2]
+				if(args.size() > 2)
+					alias = true;
+				else
+					break;
+				if(args.get(1).equalsIgnoreCase("goto") || args.get(1).equalsIgnoreCase("jump"))
+					WriteByte(ddb.GetCommandInfo("if1").HexCode); //If your friends jumped off a cliff, would you jump too?
+				else if(args.get(1).equalsIgnoreCase("call"))
+					WriteByte(ddb.GetCommandInfo("if2").HexCode); //... So call me maybe!
+				currentByte++;
+				WriteByte((byte)Integer.parseInt(args.get(0).replace("0x", ""),16)); //Write the equal, not equal, etc.
+				currentByte++;
+				if(args.get(2).startsWith("0x"))
+				{
+					WriteDWord(Long.parseLong(args.get(2).replace("0x", ""), 16));
+				}
+				else
+					WriteDWord(SectionLocations.get(args.get(2)));
+				break;
+			case -27:
+				alias = true;
+				String commandLine = AliasCommands.get(command);
+				while(commandLine.contains("$"))
+				{
+					int index = commandLine.indexOf("$") + 1;
+					int argument = Integer.parseInt(commandLine.toCharArray()[index] + "");
+					commandLine = commandLine.replace("$" + argument, args.get(argument - 1) + "");
+				}
+				compileScript(commandLine.split("\n"));
+				break;
+			default:
+				break;
+			}
+
+			if(!alias)
+			{
+				//Write command bytecode
+				WriteByte(cmd.HexCode);
+				currentByte++;
+
+				//Write args
+				int counter = -1;
+				for(String arg : args)
+				{
+					counter++;
+					if(arg.equals(""))
+						break;
+					long arglength = 0;
+					char argtype = cmd.ParamFormat.toCharArray()[counter];
+					if((arg.startsWith("0x") || isHex(arg)) && !VariableValues.containsKey(arg.trim()))
+					{
+						arglength = Long.parseLong(arg.replace("0x", ""), 16);
+					}
+					else if(!VariableValues.containsKey(arg.trim()))
+					{
+						try
+						{
+							arglength = Long.parseLong(arg);
+						}
+						catch(Exception e)
+						{
+							arg = arg.trim();
+							if(argtype >= 3)
+								break;
+							if(VariableValues.containsKey(arg))
+							{
+								long pointer = VariableValues.get(arg);
+								WriteDWord(pointer);
+								currentByte += 4;
+							}
+							else
+							{
+								int pointer = SectionLocations.get(arg);
+								WriteDWord(pointer);
+								currentByte += 4;
+							}
+							continue;
+						}
+					}
+					if(argtype == '3') //Word Value
+					{
+						if(VariableValues.containsKey(arg))
+						{
+							long pointer = VariableValues.get(arg);
+							WriteDWord(pointer);
+							currentByte += 4;
+						}
+						else
+						{
+							WriteDWord(arglength);
+						}
+						continue;
+					}
+					if(argtype == '2')
+					{
+						if(VariableValues.containsKey(arg))
+						{
+							long pointer = VariableValues.get(arg);
+							WriteWord(pointer & 0xFFFF);
+							currentByte += 2;
+						}
+						else
+						{
+							WriteWord(arglength);
+							currentByte += 2;
+						}
+						continue;
+					}
+					if(argtype == '1')
+					{
+						if(VariableValues.containsKey(arg))
+						{
+							long pointer = VariableValues.get(arg);
+							WriteByte(pointer & 0xFF);
+							currentByte += 1;
+						}
+						else
+						{
+							WriteByte(arglength);
+							currentByte++;
+						}
+						continue;
+					}
+				}
+				continue;
+			}
+		}
+	}
+	
+	public void writeStrings(String[] lines)
+	{
+		for(String s : lines) //Write strings to ROM
+		{
+			if(s.startsWith(":"))
+			{
+				String orig = s;
+				String message = "";
+				String[] split = s.split(" ");
+				s = split[0];
+				message = orig.replaceFirst(s, "").replaceFirst(" ", "").replace("(", "").replace(")", "");
+				s = orig;
+				if(!StringList.contains(message))
+					continue;
+				if(!AddStringToSectionTable(s.replace(":", "")))
+				{
+					error = true;
+					errorString = errorReport;
+					break;
+				}
+			}
+		}
+	}
+	
+	public void preCompile(String[] lines)
+	{
+		int startLineNum = linenumber;
+		int startByte = currentByte;
+		for(String s : lines)
+		{
+			linenumber++;
+			if(s.startsWith("#"))
+				continue;
+			if(s.startsWith(";"))
+				continue;
+			if(s.startsWith(":"))
+			{
+				if(s.contains("(") && s.contains(")"))
+				{
+					String orig = s;
+					String message = "";
+					String[] split = s.split(" ");
+					s = split[0];
+					message = orig.replaceFirst(s, "").replaceFirst(" ", "").replace("(", "").replace(")", "");
+					StringList.add(message);
+				}
+				continue;
+			}
+			else if(s.toLowerCase().startsWith("import"))
+			{
+				header += HeaderHelper.GetHeader(s.split(" ")[1].toString());
+			}
+			else if(s.equals(""))		//Whitespace
+				continue;
+			else if(s.startsWith("//")) //Comment
+				continue;
+			else if(s.startsWith("'")) //Comment
+				continue;
+			else if(s.startsWith("*"))
+			{
+				String alias = s.split(" ")[0].replace("*", "");
+				String commands = s.split("\\(",2)[1].replaceFirst("\\)", "").replace(";", "\n");
+				AliasCommands.put(alias,commands);
+			}
+			else if(s.contains("=")) //Variables
+			{
+				String[] args = s.split("=");
+				String name = args[0].trim();
+				long value = 0;
+				String arg = args[1].replace("0x", "").trim();
+				if(args[1].contains("0x"))
+					value = Long.parseLong(arg,16);
+				else if(isHex(arg))
+					value = Long.parseLong(arg,16);
+				else 
+					value = Long.parseLong(arg);
+				VariableValues.put(name,value);
+			}
+			else
+			{
+				String filter = s.replace('(', ' ');
+				filter = filter.replace(')', ' ');
+				String[] split = filter.split(" ");
+				String command = split[0];
+				List<String> args = new ArrayList<String>();
+
+				for(int i = 1; i < split.length; i++)
+				{
+					args.add(split[i]);
+				}
+				
+				if(AliasCommands.containsKey(command))
+				{
+					String commandLine = AliasCommands.get(command);
+					while(commandLine.contains("$"))
+					{
+						int index = commandLine.indexOf("$") + 1;
+						int argument = Integer.parseInt(commandLine.toCharArray()[index] + "");
+						commandLine = commandLine.replace("$" + argument, args.get(argument - 1) + "");
+					}
+					preCompile(commandLine.split("\n"));
+					continue;
+				}
+				
+				switch(command)
+				{
+				case "msgbox": //msgbox negative bytecode
+					currentByte++;
+					currentByte += 4;
+					currentByte++;
+					currentByte++;
+					break;
+				default:
+					Command cmd = ddb.GetCommandInfo(command);
+					if(cmd == null)
+						new Command("error", -1, "error",-1,-1, "");
+					if(cmd.HexCode == -1)
+					{
+						if(AliasCommands.containsKey(command))
+						{
+							cmd.HexCode = -27;
+							cmd.Name = command;
+							cmd.Description = "Custom Alias";
+							cmd.NumParams = 0;
+							cmd.ParamFormat = "";
+							cmd.TotalSize = 0;
+							preCompile(AliasCommands.get(command).split("\n"));
+						}
+						else
+						{
+							error = true;
+							errorString = "Command not found: " + command + " on line " + linenumber;
+							break;
+						}
+					}
+					currentByte += cmd.TotalSize;
+					break;
+				}
+			}
+		}
+
+		
+		for(String s : lines) //Get string's pointers for compiling.
+		{
+			oldByte = currentByte;
+			if(s.startsWith("#"))
+			{
+				SetScriptStart(s.replace("#0x", ""));
+				continue;
+			}
+			else if(s.startsWith(";"))
+			{
+				SetFreespaceStart(s.replace(";0x", ""));
+				continue;
+			}
+			else if(s.startsWith(":"))
+			{
+				if(s.contains("(") && s.contains(")"))
+				{
+					String orig = s;
+					String message = "";
+					String[] split = s.split(" ");
+					s = split[0];
+					message = orig.replaceFirst(s, "").replaceFirst(" ", "").replace("(", "").replace(")", "");
+					s = orig;
+					if(!StringList.contains(message))
+						continue;
+					if(!AddStringToSectionTableTest(s.replace(":", "")))
+					{
+						error = true;
+						errorString = errorReport;
+						break;
+					}
+				}
+			}
+		}
+		
+		linenumber = startLineNum;
+		oldByte = currentByte;
+		currentByte = startByte;
+		for(String s : lines) //One more time, this time to get sections. All this looping is making be feel like a bad programmer. :P
+		{
+			if(s.startsWith(":"))
+			{
+				if(!s.contains("(") && !s.contains(")"))
+				{
+					if(!AddStringToSectionTableTest(s.replace(":", ""))) //Sections we want to go in normally.
+					{
+						error = true;
+						errorString = errorReport;
+						break;
+					}
+				}
+			}
+		}
 	}
 }
