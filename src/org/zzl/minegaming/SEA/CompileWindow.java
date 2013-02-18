@@ -82,7 +82,7 @@ public class CompileWindow extends JFrame {
 				fd.show();
 				GlobalVars.FileLoc = fd.getDirectory() + fd.getFile();
 				Path location = Paths.get(fd.getDirectory() + fd.getFile());
-				String s = "LOG OUTPUT:\n-----\n\n" + LogOutput + "\n" + ByteCode + "\n\nCONSOLE OUTPUT:\n-----\n\n" + Main.lpsOut.buf + "\n\nERRORS:\n-----\n\n" + Main.lpsErr.buf;
+				String s = "LOG OUTPUT:\n-----\n\n" + LogOutput + "\n" + ByteCode + "\n\nCONSOLE OUTPUT:\n-----\n\n" + Main.lpsOut.buf + "\n\nERRORS:\n-----\n\n" + Main.lpsErr.buf + "\n\n" + "SCRIPT:\n-----" + "\n\n" + Main.scriptEditor.getText();
 				byte[] b = new byte[s.length()];
 				for(int i = 0; i < s.length(); i++)
 				{
@@ -126,8 +126,8 @@ public class CompileWindow extends JFrame {
 		{
 			public void actionPerformed(ActionEvent arg0) 
 			{
-				Path location = Paths.get(GlobalVars.SettingsDir + File.pathSeparator + "temp.log");
-				String s = "LOG OUTPUT:\n-----\n\n" + LogOutput + "\n" + ByteCode + "\n\nCONSOLE OUTPUT:\n-----\n\n" + Main.lpsOut.buf + "\n\nERRORS:\n-----\n\n" + Main.lpsErr.buf;
+				Path location = Paths.get(GlobalVars.SettingsDir + File.separator + "temp.log");
+				String s = "LOG OUTPUT:\n-----\n\n" + LogOutput + "\n" + ByteCode + "\n\nCONSOLE OUTPUT:\n-----\n\n" + Main.lpsOut.buf + "\n\nERRORS:\n-----\n\n" + Main.lpsErr.buf + "\n\n" + "SCRIPT:\n-----" + "\n\n" + Main.scriptEditor.getText();
 				byte[] b = new byte[s.length()];
 				for(int i = 0; i < s.length(); i++)
 				{

@@ -9,6 +9,8 @@ import java.awt.FileDialog;
 import java.awt.Font;
 import java.awt.Frame;
 import java.awt.FlowLayout;
+import java.awt.Rectangle;
+
 import javax.swing.border.BevelBorder;
 
 import org.zzl.minegaming.SEA.TextEdit.ScriptEditor;
@@ -36,9 +38,11 @@ public class Main extends JFrame
 	public static int[] hex = new int[] { 0x6a, 0x5a, 0x0f, 0x00, 0x0c, 0x00, 0x80, 0x08, 0x09, 0x02, 0x6c, 0x02, 0xc2, 0xd9, 0xe0, 0xe0, 0xe3, 0xb8, 0x00, 0xd1, 0xe3, 0xe6, 0xe0, 0xd8, 0xab, 0xff};
 	public static int scriptStart = 0x800000;
 	public static final ScriptEditor scriptEditor = new ScriptEditor();
+	final JToolBar toolBar = new JToolBar();
 	public Main() 
 	{
-		this.setSize(new Dimension(935, 596));
+		setTitle("Script Editor Advanced");
+		this.setSize(new Dimension(996, 596));
 		JPanel panel = new JPanel();
 		getContentPane().add(panel, BorderLayout.CENTER);
 		panel.setLayout(new BorderLayout(0, 0));
@@ -278,21 +282,24 @@ public class Main extends JFrame
 		JPanel panel_2 = new JPanel();
 		panel_5.add(panel_2, BorderLayout.NORTH);
 		panel_2.setPreferredSize(new Dimension(1030, 36));
-		panel_2.setLayout(null);
-		
-		JToolBar toolBar = new JToolBar();
-		toolBar.setBounds(0, 0, 699, 37);
-		panel_2.add(toolBar);
+		panel_2.setLayout(new BorderLayout(0, 0));
+		panel_2.add(toolBar, BorderLayout.CENTER);
 		toolBar.setMargin(new Insets(2, 5, 2, 5));
 		
 		JLabel lblFile = new JLabel("File: ");
 		toolBar.add(lblFile);
 		
+		JPanel panel_8 = new JPanel();
+		panel_8.setMaximumSize(new Dimension(200, 20));
+		toolBar.add(panel_8);
+		panel_8.setLayout(new BorderLayout(0, 0));
+		
 		final JComboBox cbFile = new JComboBox();
+		cbFile.setPreferredSize(new Dimension(250, 30));
+		panel_8.add(cbFile);
 		cbFile.setEditable(true);
 		cbFile.setMinimumSize(new Dimension(200, 20));
 		cbFile.setMaximumSize(new Dimension(200, 20));
-		toolBar.add(cbFile);
 		
 		scriptEditor.setText(";0x800000\n//Script Editor Advanced (SEA) Testing Release!\n\n:start\nlock\nfaceplayer\nmsgbox(msg 2)\nrelease\nend\n\n:msg (Hello, World!)");
 		scriptEditor.setFont(new Font("Monospaced", Font.PLAIN, 12));
@@ -330,6 +337,7 @@ public class Main extends JFrame
 					cbFile.addItem(fd.getDirectory() + fd.getFile());
 					cbFile.setMinimumSize(new Dimension(200, 20));
 					cbFile.setMaximumSize(new Dimension(200, 20));
+					cbFile.setMaximumSize( cbFile.getPreferredSize() );
 				}
 				catch(Exception e)
 				{
@@ -492,6 +500,9 @@ public class Main extends JFrame
 	    		float percent = (float)(1f - (220f / (float)c.getWidth()));
 	    		splitPane.setDividerLocation((int)(c.getWidth() * (float)percent));
 	            System.out.println((1 - (220 / c.getWidth())));
+	            Rectangle r = toolBar.getBounds();
+	            r.width = c.getWidth() - 240;
+	            toolBar.setBounds(r);
 	        }
 
 			@Override
