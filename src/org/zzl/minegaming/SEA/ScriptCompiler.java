@@ -44,6 +44,7 @@ public class ScriptCompiler extends Thread
 			CompileWindow.ByteCode = "";
 			CompileWindow.LogOutput = "";
 			String[] lines = script.split("\n");
+			header += HeaderHelper.GetHeader("<AliasCommands.rbh>");
 
 			preCompile(lines);
 			String[] headers = header.split("\n");
@@ -111,6 +112,7 @@ public class ScriptCompiler extends Thread
 			e.printStackTrace();
 			CompileWindow.tbLog.setForeground(Color.red);
 			CompileWindow.LogOutput += 	"JAVA EXCEPTION WHILE COMPILING!\n---------------\n" + sw.toString(); // stack trace as a string
+			CompileWindow.LogOutput += 	"\n at line " + linenumber;
 			CompileWindow.UpdateText();
 		}
 	}
@@ -769,7 +771,14 @@ public class ScriptCompiler extends Thread
 			}
 			else if(s.toLowerCase().startsWith("import"))
 			{
-				header += HeaderHelper.GetHeader(s.split(" ")[1].toString());
+				String h = HeaderHelper.GetHeader(s.split(" ")[1].toString());
+				if(h.contains("ERROR!"))
+				{
+					error = true;
+					errorString = "Header Error! Could not find file " + h.split(" ")[1];
+					continue;
+				}
+				header += h;
 			}
 			else if(s.equals(""))		//Whitespace
 				continue;
