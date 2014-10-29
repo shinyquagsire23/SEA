@@ -17,9 +17,6 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.FilenameFilter;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -81,7 +78,7 @@ public class CompileWindow extends JFrame {
 				fd.setFile(dateFormat.format(date) + ".log");
 				fd.show();
 				GlobalVars.FileLoc = fd.getDirectory() + fd.getFile();
-				Path location = Paths.get(fd.getDirectory() + fd.getFile());
+				//Path location = Paths.get(fd.getDirectory() + fd.getFile());
 				String s = "LOG OUTPUT:\n-----\n\n" + LogOutput + "\n" + ByteCode + "\n\nCONSOLE OUTPUT:\n-----\n\n" + Main.lpsOut.buf + "\n\nERRORS:\n-----\n\n" + Main.lpsErr.buf + "\n\n" + "SCRIPT:\n-----" + "\n\n" + Main.scriptEditor.getText();
 				byte[] b = new byte[s.length()];
 				for(int i = 0; i < s.length(); i++)
@@ -90,7 +87,7 @@ public class CompileWindow extends JFrame {
 				}
 				try
 				{
-					Files.write(location, b);
+					//Files.write(location, b);
 				}
 				catch(Exception ex)
 				{
@@ -126,7 +123,7 @@ public class CompileWindow extends JFrame {
 		{
 			public void actionPerformed(ActionEvent arg0) 
 			{
-				Path location = Paths.get(GlobalVars.SettingsDir + File.separator + "temp.log");
+				//Path location = Paths.get(GlobalVars.SettingsDir + File.separator + "temp.log");
 				String s = "LOG OUTPUT:\n-----\n\n" + LogOutput + "\n" + ByteCode + "\n\nCONSOLE OUTPUT:\n-----\n\n" + Main.lpsOut.buf + "\n\nERRORS:\n-----\n\n" + Main.lpsErr.buf + "\n\n" + "SCRIPT:\n-----" + "\n\n" + Main.scriptEditor.getText();
 				byte[] b = new byte[s.length()];
 				for(int i = 0; i < s.length(); i++)
@@ -135,9 +132,9 @@ public class CompileWindow extends JFrame {
 				}
 				try
 				{
-					Files.delete(location);
-					Files.createFile(location);
-					Files.write(location, b);
+					//Files.delete(location);
+					//Files.createFile(location);
+					//Files.write(location, b);
 					Desktop.getDesktop().open(new File(GlobalVars.SettingsDir + "/temp.log"));
 				}
 				catch(Exception ex)

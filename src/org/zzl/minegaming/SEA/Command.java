@@ -23,4 +23,9 @@ public class Command
 	{
 		new Command(Name,Hex,Description,TotalSize, 0, "");
 	}
+
+	public Command newInstance()
+	{
+		return new Command(Name, HexCode, Description, TotalSize, NumParams, ParamFormat);
+	}
 }

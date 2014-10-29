@@ -2,7 +2,7 @@ package org.zzl.minegaming.SEA;
 
 import java.util.HashMap;
 
-public class ScriptDecompiler {
+public class ScriptDecompilerASM {
 
 	//int[] bytecode;
 	String script = "";
@@ -12,7 +12,7 @@ public class ScriptDecompiler {
 	
 	public String decompile(byte[] rom_signed, int datalocation)
 	{
-		script = "#0x" + toHexString(datalocation) + "\n\n";
+		script = "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n@ Script ASM for offset 0x08" + toHexString(datalocation) + " @\n@@@@@@@ Generated using SEA @@@@@@@@\n      @@@@@@@@@@@@@@@@@@@@@@@       \n.include \"scr_names.asm\"\n\nscr_8" + toHexString(datalocation) + ": \n";
 		int[] rom = new int[rom_signed.length];
 		for(int i = 0; i < rom.length; i++)
 		{
@@ -26,11 +26,13 @@ public class ScriptDecompiler {
 		boolean lastwasmsg = false;
 		int currentSubscript = 0;
 		int i = datalocation - 1;
+		System.out.println(toHexString(datalocation));
+		
 		while(!completelydecompiled)
 		{
 			i++;
 			String toWrite = "";
-			System.out.println(toHexString(datalocation));
+			
 			
 			if(mainscriptdone && subscriptdone)
 			{
@@ -54,15 +56,15 @@ public class ScriptDecompiler {
 			
 			if(SectionLocations.containsValue(datalocation)) //Check if we have a data reference here...
 			{
-				String sectionType = "loc_";
+				String sectionType = "scrloc_";
 				if(lastwasmsg)
 					toWrite += "\n";
-				toWrite += "\n:" + sectionType + toDwordString(datalocation,true) + " "; //If it's just a script reference, mark a section and continue.
+				toWrite += "\n\n" + sectionType + toDwordString(datalocation,true) + ": "; //If it's just a script reference, mark a section and continue.
 				if(SectionTypes.containsKey(datalocation)) 
 				{
 					if(SectionTypes.get(datalocation) == PointerType.Text) //Check if we have a string here.
 					{
-						sectionType = "msg_";
+						/*sectionType = "scrmsg_";
 						toWrite = "";
 						if(lastwasmsg)
 							toWrite += "";
@@ -83,7 +85,7 @@ public class ScriptDecompiler {
 						addLine(toWrite);
 						subscriptdone = true;
 						lastwasmsg = true;
-						continue; //We don't want to get anything else after the string, so skip the rest of this loop.
+						continue;*/ //We don't want to get anything else after the string, so skip the rest of this loop.
 					}
 					else
 						toWrite += "\n";
@@ -93,76 +95,15 @@ public class ScriptDecompiler {
 			lastwasmsg = false;
 			int instruction = rom[i];
 			Command cmd = ddb.GetCommandInfo(instruction);
-			
-			//Command Aliases
-			if(cmd.Name.equalsIgnoreCase("preparemsg") && rom[i + 5] == ddb.GetCommandInfo("callstd").HexCode)
+			if(cmd.Name.equalsIgnoreCase("error"))
 			{
-				toWrite += "msgbox("; //Start our command alias
-				int args = 1;
-				
-				//Parse the DWord value
-				String dword = "0x" + byteToStringNoZero(rom[i + args + 3] - 8) + toHexString(rom[i + args + 2], true) + toHexString(rom[i + args + 1], true) + toHexString(rom[i + args], true);
-				int dwint = Integer.parseInt(dword.replace("0x", "").trim(),16);
-				SectionLocations.put(dword, dwint);
-				System.out.println("Registered string at "+ dword + "\n0x" + toHexString(dwint));
-				
-				//Register our string in SectionTypes
-				SectionTypes.put(dwint, PointerType.Text);
-				String sectionType = "msg_";
-				System.out.println("Found section at " + dword + "! Type: " + sectionType.replace("_", ""));
-				
-				//Write the DWord
-				toWrite += dword.replace("0x", sectionType);
-				toWrite += " " + rom[i + 6] + ")";
-				
-				//Add to our data counter, and push the new line to our text viewer
-				i += 6;
-				datalocation += 6;
-				addLine(toWrite.trim());
-				Main.scriptEditor.setText(script.trim());
-				continue;
+				toWrite += ".byte 0x" + toHexString(instruction) + " ";
+				System.out.println("Unknown bytecode " + toHexString(instruction));
 			}
-			
-			if(cmd.Name.equalsIgnoreCase("if1") || cmd.Name.equalsIgnoreCase("if2"))
-			{
-				toWrite += "if("; //Start our command alias
-				int args = 1;
-				
-				toWrite += "0x" + toHexString(rom[i + args]) + " "; //Write our factor thingy
-				args += 1;
-				
-				//Write goto or call depending on the if type
-				if(cmd.Name.equalsIgnoreCase("if1"))
-					toWrite += "goto ";
-				else
-					toWrite += "call ";
-				
-				//Write our location
-				String dword = "0x" + byteToStringNoZero(rom[i + args + 3] - 8) + toHexString(rom[i + args + 2], true) + toHexString(rom[i + args + 1], true) + toHexString(rom[i + args], true);
-				int dwint = Integer.parseInt(dword.replace("0x", "").trim(),16);
-				String sectionType = "loc_";
-				
-				//Register it
-				SectionLocations.put(dword, dwint);
-				SectionTypes.put(dwint, PointerType.Script);
-				
-				System.out.println("Found section at " + dword + "! Type: " + sectionType.replace("_", ""));
-				toWrite += dword.replace("0x", sectionType) + ") ";
-				
-				//Add to our data counter, and push the new line to our text viewer
-				i += 5;
-				datalocation += 5;
-				addLine(toWrite.trim());
-				Main.scriptEditor.setText(script.trim());
-				continue;
-			}
-			
-			toWrite += cmd.Name + " ";
+			else
+				toWrite += ".byte " + cmd.Name + " ";
 			int args = 1;
-			if(cmd.NumParams > 0)
-			{
-				toWrite = toWrite.trim() + "("; //Open paremeter parentheses, trim any spaces before it.
-			}
+
 			for(int j = 0; j < cmd.NumParams; j++)
 			{
 				try
@@ -170,42 +111,53 @@ public class ScriptDecompiler {
 				switch(cmd.ParamFormat.charAt(j)) //Parse parameters
 				{
 				case '1':
-					toWrite += "0x" + toHexString(rom[i + args]) + " ";
+					toWrite += "\n.byte 0x" + toHexString(rom[i + args]) + " ";
 					args += 1;
 					break;
 				case '2':
-					toWrite += "0x" + toHexString(rom[i + args + 1]) + toHexString(rom[i + args], true) + " ";
+					toWrite += "\n.word 0x" + toHexString(rom[i + args + 1]) + toHexString(rom[i + args], true) + " ";
 					args += 2;
 					break;
 				case '3':
 					String dword = "0x" + byteToStringNoZero(rom[i + args + 3] - 8) + toHexString(rom[i + args + 2], true) + toHexString(rom[i + args + 1], true) + toHexString(rom[i + args], true);
-					int dwint = Integer.parseInt(dword.replace("0x", "").trim(),16);
-					String sectionType = "loc_";
-					if(rom[i + args + 4] == ddb.GetCommandInfo("callstd").HexCode) 
+					int dwint = 0;
+					boolean tooLarge = false;
+					try
+					{
+						dwint = Integer.parseInt(dword.replace("0x", "").trim(),16);
+					}
+					catch(Exception e)
+					{
+						tooLarge = true;
+					}
+					String sectionType = "scrloc_";
+					boolean isString = false;
+					if(rom[i + args + 4] == ddb.GetCommandInfo("callstd").HexCode && !tooLarge) 
 					{
 						//If the next command is callstd, this is probably a message...
-						SectionLocations.put(dword, dwint);
-						System.out.println("Registered string at "+ dword + "\n0x" + toHexString(dwint));
-						SectionTypes.put(dwint, PointerType.Text);
-						sectionType = "msg_";
+						//SectionLocations.put(dword, dwint);
+						//System.out.println("Registered string at "+ dword + "\n0x" + toHexString(dwint));
+						//SectionTypes.put(dwint, PointerType.Text);
+						sectionType = "scrmsg_";
+						isString = true;
 					}
-					else if(rom[i] == ddb.GetCommandInfo("goto").HexCode || rom[i] == ddb.GetCommandInfo("call").HexCode || rom[i] == ddb.GetCommandInfo("if1").HexCode || rom[i] == ddb.GetCommandInfo("if2").HexCode)
+					else if((rom[i] == ddb.GetCommandInfo("goto").HexCode || rom[i] == ddb.GetCommandInfo("call").HexCode || rom[i] == ddb.GetCommandInfo("if1").HexCode || rom[i] == ddb.GetCommandInfo("if2").HexCode) && !tooLarge)
 					{
 						SectionLocations.put(dword, dwint);
 						SectionTypes.put(dwint, PointerType.Script);
 					}
-					else if(rom[i] == ddb.GetCommandInfo("applymovement").HexCode)
+					else if(rom[i] == ddb.GetCommandInfo("applymovement").HexCode && !tooLarge)
 					{
 						SectionLocations.put(dword, dwint);
 						SectionTypes.put(dwint, PointerType.Movement);
 					}
-					if(SectionLocations.containsKey(dword))
+					if(SectionLocations.containsKey(dword) || isString)
 					{
 						System.out.println("Found section at " + dword + "! Type: " + sectionType.replace("_", ""));
-						toWrite += dword.replace("0x", sectionType);
+						toWrite += "\n.long " + dword.replace("0x", sectionType);
 					}
 					else
-						toWrite += dword + " ";
+						toWrite += "\n.long " + dword + " ";
 					break;
 				case 0:
 				default:
@@ -214,8 +166,7 @@ public class ScriptDecompiler {
 				}
 				catch(Exception e){e.printStackTrace();}
 			}
-			if(cmd.NumParams > 0)
-				toWrite = toWrite.trim() + ")"; //Close paremeter parentheses and trim of any spaces.
+			
 			if(cmd.TotalSize > 0)
 			{
 				i += cmd.TotalSize - 1;
@@ -230,6 +181,7 @@ public class ScriptDecompiler {
 				mainscriptdone = true;
 				if(!SectionLocations.isEmpty()) //If the main script is decompiled, start on the subscript/strings
 				{
+					//We don't want strings for now.
 					currentSubscript = (Integer)SectionLocations.values().toArray()[0];
 					i = currentSubscript - 1;
 					datalocation = currentSubscript;

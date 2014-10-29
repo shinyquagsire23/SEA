@@ -4,7 +4,11 @@ public enum PointerType
 {
 	Script,
 	Text,
+	JapText,
 	Braille,
 	Movement,
-	Mart
+	Mart,
+	Data, 
+	LevelScript,
+	LevelScriptArray,
 }

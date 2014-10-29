@@ -1,5 +1,6 @@
 package org.zzl.minegaming.SEA;
 import javax.swing.*;
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -21,13 +22,19 @@ import java.awt.event.ComponentListener;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.Insets;
+
 import javax.swing.border.LineBorder;
 import javax.swing.border.TitledBorder;
+
 import java.io.File;
 import java.io.FilenameFilter;
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class Main extends JFrame
@@ -325,6 +332,7 @@ public class Main extends JFrame
 				      return (name.toLowerCase().endsWith(".gba") || name.toLowerCase().endsWith(".bin") || name.toLowerCase().endsWith(".rbc") || name.toLowerCase().endsWith(".rbh"));
 				    }
 				 });
+				
 				fd.setDirectory(GlobalVars.LastDir);
 				fd.show();
 				GlobalVars.FileLoc = fd.getDirectory() + fd.getFile();
@@ -430,7 +438,7 @@ public class Main extends JFrame
 		{
 			public void actionPerformed(ActionEvent arg0) 
 			{
-				scriptEditor.setText(new ScriptDecompiler().decompile(GlobalVars.NewROM, scriptStart));
+				scriptEditor.setText(new ScriptDecompilerASM().decompile(GlobalVars.NewROM, 0x16047C));
 			}
 		});
 		btnDecompile.setIcon(new ImageIcon(Main.class.getResource("/org/zzl/minegaming/SEA/resources/Decompile.png")));
@@ -458,7 +466,7 @@ public class Main extends JFrame
 				//TODO Start emulator
 				try
 				{
-					Files.write(Paths.get(GlobalVars.MainDir + "/temp.gba"), GlobalVars.NewROM);
+					//Files.write(Paths.get(GlobalVars.MainDir + "/temp.gba"), GlobalVars.NewROM);
 					Desktop.getDesktop().open(new File(GlobalVars.MainDir + "/temp.gba"));
 				}
 				catch(Exception e)
@@ -523,8 +531,85 @@ public class Main extends JFrame
 	static boolean started = false;
 	public static LoggedPrintStream lpsOut = LoggedPrintStream.create(System.out);
 	public static LoggedPrintStream lpsErr = LoggedPrintStream.create(System.err);
-	public static void main(String[] args)
+	public static void main(String[] args) throws IOException
 	{
+		int argNum = 0;
+		ArrayList<Integer> forceScripts = new ArrayList<Integer>();
+		ArrayList<Integer> forceLvScripts = new ArrayList<Integer>();
+		ArrayList<Integer> forceStrings = new ArrayList<Integer>();
+		ArrayList<Integer> forceJapStrings = new ArrayList<Integer>();
+		ArrayList<Integer> forceMovement = new ArrayList<Integer>();
+		for(String s : args)
+		{
+			if(s.equalsIgnoreCase("d") | s.equalsIgnoreCase("ds"))
+			{
+				String file = args[argNum + 1];
+				GlobalVars.FileLoc = file;
+				Path location = Paths.get(file);
+				try
+				{
+					GlobalVars.ROM = Files.readAllBytes(location);
+					GlobalVars.NewROM = Files.readAllBytes(location);
+					GlobalVars.FileOpened = true;
+				}
+				catch(Exception e)
+				{
+					e.printStackTrace();
+				}
+				
+				new ScriptDecompilerASMSequential().decompile(GlobalVars.NewROM, Integer.parseInt(args[argNum + 2], 16), Integer.parseInt(args[argNum + 3], 16), forceScripts, forceLvScripts, forceStrings, forceJapStrings, forceMovement, s.equalsIgnoreCase("ds"));
+				return;
+			}
+			else if(s.equalsIgnoreCase("h"))
+			{
+				String header = "";
+				for(int i = 0; i < 0x100; i++)
+				{
+					Command c = Commands.GetCommandInfo(i);
+					header += ".equ\t" + c.Name + ","+ (c.Name.length() < 16 ? "\t" : "") + (c.Name.length() < 8 ? "\t" : "") + (c.Name.length() < 4 ? "\t" : "") + "\t0x" + String.format("%X", c.HexCode) + "\n";
+				}
+				try
+				{
+					Files.write(Paths.get("./scr_names.asm"), header.getBytes());
+				}
+				catch (IOException e)
+				{
+					e.printStackTrace();
+				}
+				return;
+			}
+			else if(s.equalsIgnoreCase("s"))
+			{
+				List<String> offsets = Files.readAllLines(Paths.get(args[argNum + 1]), Charset.defaultCharset());
+				for(String str : offsets)
+					forceScripts.add(Integer.parseInt(str,16));
+			}
+			else if(s.equalsIgnoreCase("lv"))
+			{
+				List<String> offsets = Files.readAllLines(Paths.get(args[argNum + 1]), Charset.defaultCharset());
+				for(String str : offsets)
+					forceLvScripts.add(Integer.parseInt(str,16));
+			}
+			else if(s.equalsIgnoreCase("str"))
+			{
+				List<String> offsets = Files.readAllLines(Paths.get(args[argNum + 1]), Charset.defaultCharset());
+				for(String str : offsets)
+					forceStrings.add(Integer.parseInt(str,16));
+			}
+			else if(s.equalsIgnoreCase("strj"))
+			{
+				List<String> offsets = Files.readAllLines(Paths.get(args[argNum + 1]), Charset.defaultCharset());
+				for(String str : offsets)
+					forceJapStrings.add(Integer.parseInt(str,16));
+			}
+			else if(s.equalsIgnoreCase("mov"))
+			{
+				List<String> offsets = Files.readAllLines(Paths.get(args[argNum + 1]), Charset.defaultCharset());
+				for(String str : offsets)
+					forceMovement.add(Integer.parseInt(str,16));
+			}
+			argNum++;
+		}
 		System.setOut(lpsOut);
 		System.setErr(lpsErr);
 		

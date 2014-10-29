@@ -832,15 +832,15 @@ public class ScriptCompiler extends Thread
 					continue;
 				}
 				
-				switch(command)
+				if(command.equals("msgbox"))
 				{
-				case "msgbox": //msgbox negative bytecode
 					currentByte++;
 					currentByte += 4;
 					currentByte++;
 					currentByte++;
-					break;
-				default:
+				}
+				else
+				{
 					Command cmd = ddb.GetCommandInfo(command);
 					if(cmd == null)
 						new Command("error", -1, "error",-1,-1, "");
@@ -864,7 +864,6 @@ public class ScriptCompiler extends Thread
 						}
 					}
 					currentByte += cmd.TotalSize;
-					break;
 				}
 			}
 		}

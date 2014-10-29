@@ -14,7 +14,10 @@ public class Database
 	Connection conn;
 	Statement stat;
 	public static HashMap<String, Command> commands = new HashMap<String, Command>();
+	public static HashMap<Integer, Command> commands_int = new HashMap<Integer, Command>();
 	public static HashMap<Integer, String> pokeString = new HashMap<Integer, String>();
+	public static HashMap<Integer, String> pokeStringJap = new HashMap<Integer, String>();
+	public static HashMap<Integer, String> brailleString = new HashMap<Integer, String>();
 	public Database()
 	{
 		try 
@@ -29,11 +32,24 @@ public class Database
 		{
 			Command c = new Command(rs.getString("name"),rs.getInt("hex"),rs.getString("desc"), rs.getInt("length"), rs.getInt("args"),rs.getString("arglengths"));
 			commands.put(rs.getString("name"), c);
+			commands_int.put(rs.getInt("hex"), c);
 		}
 		rs = stat.executeQuery("select * from pokestring;");
 		while (rs.next()) 
 		{
 			pokeString.put(rs.getInt("hex"), rs.getString("char"));
+		}
+		
+		rs = stat.executeQuery("select * from pokestring_jap;");
+		while (rs.next()) 
+		{
+			pokeStringJap.put(rs.getInt("hex"), rs.getString("char"));
+		}
+		
+		rs = stat.executeQuery("select * from braille;");
+		while (rs.next()) 
+		{
+			brailleString.put(rs.getInt("hex"), rs.getString("char"));
 		}
 		rs.close();
 		//conn.close();
@@ -61,21 +77,7 @@ public class Database
 		}
 	}
 	
-	public Command GetCommandInfo(String cmd)
-	{
-		try
-		{
-			return commands.get(cmd);
-		}
-		catch(Exception e)
-		{
-			if(cmd.equalsIgnoreCase("msgbox"))
-				return new Command("msgbox",-2,"Prints text to a messagebox.\nEquivalent to:\n\nloadpointer 0x0 <msg-dword>\ncallstd <type-byte>", 8, 2, "30");
-			return new Command("error", -1, "error",-1,-1, "");
-		}
-	}
-	
-	public Command GetCommandInfo(int cmd)
+	public Command GetCommandInfoDDB(int cmd)
 	{
 		try 
 		{
@@ -88,7 +90,35 @@ public class Database
 		return c;
 		} catch (SQLException e) 
 		{
-			e.printStackTrace();
+			return new Command("error", -1, "error",-1,-1, "");
+		}
+	}
+	
+	public Command GetCommandInfo(String cmd)
+	{
+		try
+		{
+			return commands.get(cmd).newInstance();
+		}
+		catch(Exception e)
+		{
+			if(cmd.equalsIgnoreCase("msgbox"))
+				return new Command("msgbox",-2,"Prints text to a messagebox.\nEquivalent to:\n\nloadpointer 0x0 <msg-dword>\ncallstd <type-byte>", 8, 2, "30");
+			return new Command("error", -1, "error",-1,-1, "");
+		}
+	}
+	
+	public Command GetCommandInfo(int cmd)
+	{
+		try
+		{
+			Command c = commands_int.get(cmd).newInstance();
+			if(c == null)
+				return new Command("error", -1, "error",-1,-1, "");
+			return c;
+		}
+		catch(Exception e)
+		{
 			//if(cmd.equalsIgnoreCase("msgbox"))
 				//return new Command("msgbox",-2,"Prints text to a messagebox.\nEquivalent to:\n\nloadpointer 0x0 <msg-dword>\ncallstd <type-byte>", 8, 2, "30");
 			return new Command("error", -1, "error",-1,-1, "");
@@ -149,6 +179,38 @@ public class Database
 		try 
 		{
 			c = pokeString.get(hex);
+			if(c == null)
+				c = " ";
+		} 
+		catch (Exception e) 
+		{
+			c = "\\h" + String.format("X2", hex);
+		}
+		return c;
+	}
+	
+	public String GetDesuFromHex(int hex)
+	{
+		String c;
+		try 
+		{
+			c = pokeStringJap.get(hex);
+			if(c == null)
+				c = " ";
+		} 
+		catch (Exception e) 
+		{
+			c = "\\h" + String.format("X2", hex);
+		}
+		return c;
+	}
+	
+	public String GetTextFromBraille(int hex)
+	{
+		String c;
+		try 
+		{
+			c = brailleString.get(hex);
 			if(c == null)
 				c = " ";
 		} 

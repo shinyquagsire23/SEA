@@ -22,11 +22,11 @@ public class HeaderHelper {
 		byte[] bytes = null;
 		try
 		{
-		          bytes = java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(uri));
+		          //bytes = java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(uri));
 		}
-		catch(IOException e) 
+		catch(Exception e) 
 		{ 
-			return "ERROR! " + java.nio.file.Paths.get(uri).getFileName();  
+			//return "ERROR! " + java.nio.file.Paths.get(uri).getFileName();  
 		}
 		  
 		return new String(bytes);
@@ -39,13 +39,13 @@ public class HeaderHelper {
 		byte[] bytes = null;
 		try
 		{
-		          bytes = java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(uri));
+		          //bytes = java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(uri));
 		}
-		catch(IOException e) 
+		catch(Exception e) 
 		{ 
-			return "ERROR! " + java.nio.file.Paths.get(uri).getFileName(); 
+			//return "ERROR! " + java.nio.file.Paths.get(uri).getFileName(); 
 		}
-		  
-		return new String(bytes);
+		return "";  
+		//return new String(bytes);
 	}
 }
